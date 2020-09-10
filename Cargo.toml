@@ -7,8 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-crc = "*"
+crc = "1.8.1"
 phf = { version = "0.8.0", features = ["macros"] }
-rand_xoshiro = "*"
-rust-crypto = "*"
-thiserror = "*"
+rand_xoshiro = "0.4.0"
+rust-crypto = "0.2.36"
+thiserror = "1.0.20"
