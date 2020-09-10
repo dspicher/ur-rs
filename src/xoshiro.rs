@@ -14,10 +14,20 @@ impl From<Xoshiro256StarStar> for Xoshiro256 {
     }
 }
 
+#[allow(clippy::cast_precision_loss)]
+#[allow(clippy::cast_possible_truncation)]
 impl Xoshiro256 {
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> u64 {
         self.inner.next_u64()
+    }
+
+    pub fn next_double(&mut self) -> f64 {
+        self.next() as f64 / (u64::MAX as f64 + 1.0)
+    }
+
+    pub fn next_int(&mut self, low: u64, high: u64) -> u64 {
+        (self.next_double() * ((high - low + 1) as f64)) as u64 + low
     }
 }
 
@@ -89,6 +99,20 @@ mod tests {
         ];
         for e in expected {
             assert_eq!(rng.next() % 100, e);
+        }
+    }
+
+    #[test]
+    fn test_rng_3() {
+        let mut rng = from_str("Wolf");
+        let expected = vec![
+            6, 5, 8, 4, 10, 5, 7, 10, 4, 9, 10, 9, 7, 7, 1, 1, 2, 9, 9, 2, 6, 4, 5, 7, 8, 5, 4, 2,
+            3, 8, 7, 4, 5, 1, 10, 9, 3, 10, 2, 6, 8, 5, 7, 9, 3, 1, 5, 2, 7, 1, 4, 4, 4, 4, 9, 4,
+            5, 5, 6, 9, 5, 1, 2, 8, 3, 3, 2, 8, 4, 3, 2, 1, 10, 8, 9, 3, 10, 8, 5, 5, 6, 7, 10, 5,
+            8, 9, 4, 6, 4, 2, 10, 2, 1, 7, 9, 6, 7, 4, 2, 5,
+        ];
+        for e in expected {
+            assert_eq!(rng.next_int(1, 10), e);
         }
     }
 }
