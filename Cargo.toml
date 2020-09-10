@@ -9,4 +9,6 @@ edition = "2018"
 [dependencies]
 crc = "*"
 phf = { version = "0.8.0", features = ["macros"] }
+rand_xoshiro = "*"
+rust-crypto = "*"
 thiserror = "*"
