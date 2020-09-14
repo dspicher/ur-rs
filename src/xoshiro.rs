@@ -30,6 +30,14 @@ impl Xoshiro256 {
         (self.next_double() * ((high - low + 1) as f64)) as u64 + low
     }
 
+    pub fn next_byte(&mut self) -> u8 {
+        self.next_int(0, 255) as u8
+    }
+
+    pub fn next_bytes(&mut self, n: usize) -> Vec<u8> {
+        (0..n).map(|_| self.next_byte()).collect()
+    }
+
     #[must_use]
     pub fn from_crc(bytes: &[u8]) -> Self {
         let checksum = crc::crc32::checksum_ieee(bytes);
@@ -77,6 +85,17 @@ impl From<[u8; 32]> for Xoshiro256 {
             }
         }
         Xoshiro256StarStar::from_seed(s).into()
+    }
+}
+
+#[cfg(test)]
+pub mod test_utils {
+    use super::*;
+
+    #[must_use]
+    pub fn make_message(seed: &str, size: usize) -> Vec<u8> {
+        let mut xoshiro = Xoshiro256::from(seed);
+        xoshiro.next_bytes(size)
     }
 }
 
