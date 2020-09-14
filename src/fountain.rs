@@ -13,6 +13,15 @@ pub fn partition(mut data: Vec<u8>, fragment_length: usize) -> Vec<Vec<u8>> {
     data.chunks(fragment_length).map(|c| c.to_vec()).collect()
 }
 
+pub fn join(data: Vec<Vec<u8>>, message_length: usize) -> Result<Vec<u8>, &'static str> {
+    if data.iter().map(Vec::len).sum::<usize>() < message_length {
+        return Err("insufficient data");
+    }
+    let mut flattened: Vec<u8> = data.into_iter().flatten().collect();
+    flattened.truncate(message_length);
+    Ok(flattened)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -24,10 +33,10 @@ mod tests {
     }
 
     #[test]
-    fn test_partition() {
+    fn test_partition_and_join() {
         let message = crate::xoshiro::test_utils::make_message("Wolf", 1024);
         let fragment_length = fragment_length(message.len(), 100);
-        let fragments = partition(message, fragment_length);
+        let fragments = partition(message.clone(), fragment_length);
         let expected_fragments = vec![
             "916ec65cf77cadf55cd7f9cda1a1030026ddd42e905b77adc36e4f2d3ccba44f7f04f2de44f42d84c374a0e149136f25b01852545961d55f7f7a8cde6d0e2ec43f3b2dcb644a2209e8c9e34af5c4747984a5e873c9cf5f965e25ee29039f",
             "df8ca74f1c769fc07eb7ebaec46e0695aea6cbd60b3ec4bbff1b9ffe8a9e7240129377b9d3711ed38d412fbb4442256f1e6f595e0fc57fed451fb0a0101fb76b1fb1e1b88cfdfdaa946294a47de8fff173f021c0e6f65b05c0a494e50791",
@@ -45,5 +54,7 @@ mod tests {
         for i in 0..fragments.len() {
             assert_eq!(hex::encode(&fragments[i]), expected_fragments[i]);
         }
+        let rejoined = join(fragments, message.len()).unwrap();
+        assert_eq!(rejoined, message);
     }
 }
