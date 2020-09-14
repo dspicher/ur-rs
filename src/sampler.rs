@@ -80,6 +80,16 @@ impl Weighted {
     }
 }
 
+pub fn choose_degree(
+    length: usize,
+    xoshiro: crate::xoshiro::Xoshiro256,
+) -> Result<u32, &'static str> {
+    #[allow(clippy::cast_precision_loss)]
+    let degree_weights: Vec<f64> = (1..=length).map(|x| 1.0 / x as f64).collect();
+    let mut sampler = Weighted::new(degree_weights, xoshiro)?;
+    Ok(sampler.next() + 1)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,6 +122,30 @@ mod tests {
         ];
         for e in expected_samples {
             assert_eq!(sampler.next(), e);
+        }
+    }
+
+    #[test]
+    fn test_choose_degree() {
+        let message = crate::xoshiro::test_utils::make_message("Wolf", 1024);
+        let fragment_length = crate::fountain::fragment_length(message.len(), 100);
+        let fragments = crate::fountain::partition(message, fragment_length);
+        let expected_degrees = vec![
+            11, 3, 6, 5, 2, 1, 2, 11, 1, 3, 9, 10, 10, 4, 2, 1, 1, 2, 1, 1, 5, 2, 4, 10, 3, 2, 1,
+            1, 3, 11, 2, 6, 2, 9, 9, 2, 6, 7, 2, 5, 2, 4, 3, 1, 6, 11, 2, 11, 3, 1, 6, 3, 1, 4, 5,
+            3, 6, 1, 1, 3, 1, 2, 2, 1, 4, 5, 1, 1, 9, 1, 1, 6, 4, 1, 5, 1, 2, 2, 3, 1, 1, 5, 2, 6,
+            1, 7, 11, 1, 8, 1, 5, 1, 1, 2, 2, 6, 4, 10, 1, 2, 5, 5, 5, 1, 1, 4, 1, 1, 1, 3, 5, 5,
+            5, 1, 4, 3, 3, 5, 1, 11, 3, 2, 8, 1, 2, 1, 1, 4, 5, 2, 1, 1, 1, 5, 6, 11, 10, 7, 4, 7,
+            1, 5, 3, 1, 1, 9, 1, 2, 5, 5, 2, 2, 3, 10, 1, 3, 2, 3, 3, 1, 1, 2, 1, 3, 2, 2, 1, 3, 8,
+            4, 1, 11, 6, 3, 1, 1, 1, 1, 1, 3, 1, 2, 1, 10, 1, 1, 8, 2, 7, 1, 2, 1, 9, 2, 10, 2, 1,
+            3, 4, 10,
+        ];
+        for nonce in 1..=200 {
+            let xoshiro = crate::xoshiro::Xoshiro256::from(format!("Wolf-{}", nonce).as_str());
+            assert_eq!(
+                choose_degree(fragments.len(), xoshiro).unwrap(),
+                expected_degrees[nonce - 1]
+            );
         }
     }
 }
