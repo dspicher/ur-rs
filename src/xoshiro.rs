@@ -85,11 +85,10 @@ impl From<[u8; 32]> for Xoshiro256 {
     fn from(value: [u8; 32]) -> Self {
         let mut s = [0_u8; 32];
         for i in 0..4 {
-            let o = i * 8;
             let mut v: u64 = 0;
             for n in 0..8 {
                 v <<= 8;
-                v |= u64::from(value[o + n]);
+                v |= u64::from(value[8 * i + n]);
             }
             let bytes = v.to_le_bytes();
             for n in 0..8 {
