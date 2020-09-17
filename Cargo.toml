@@ -8,10 +8,11 @@ edition = "2018"
 
 [dependencies]
 crc = "1.8.1"
+hex = "0.4.2"
 phf = { version = "0.8.0", features = ["macros"] }
 rand_xoshiro = "0.4.0"
 rust-crypto = "0.2.36"
 thiserror = "1.0.20"
 
 [dev-dependencies]
-hex = "0.4.2"
+
