@@ -5,14 +5,6 @@ pub struct Encoder {
     current_sequence: usize,
 }
 
-pub struct Part {
-    sequence: usize,
-    sequence_count: usize,
-    message_length: usize,
-    checksum: u32,
-    data: Vec<u8>,
-}
-
 impl Encoder {
     #[must_use]
     pub fn new(message: &[u8], max_fragment_length: usize) -> Self {
@@ -43,9 +35,169 @@ impl Encoder {
     }
 
     #[must_use]
-    pub fn is_complete(&self) -> bool {
+    pub fn complete(&self) -> bool {
         self.current_sequence >= self.parts.len()
     }
+}
+
+#[derive(Debug)]
+pub struct Decoder {
+    decoded: std::collections::HashMap<usize, Part>,
+    received: std::collections::HashSet<Vec<usize>>,
+    buffer: std::collections::HashMap<Vec<usize>, Part>,
+    queue: std::collections::VecDeque<(usize, Part)>,
+    sequence_count: usize,
+    message_length: usize,
+    checksum: u32,
+    fragment_length: usize,
+}
+
+impl std::default::Default for Decoder {
+    fn default() -> Self {
+        Self {
+            decoded: std::collections::HashMap::default(),
+            received: std::collections::HashSet::default(),
+            buffer: std::collections::HashMap::default(),
+            queue: std::collections::VecDeque::default(),
+            sequence_count: 0,
+            message_length: 0,
+            checksum: 0,
+            fragment_length: 0,
+        }
+    }
+}
+
+impl Decoder {
+    pub fn receive(&mut self, part: Part) -> bool {
+        if self.complete() {
+            return false;
+        }
+        if !self.validate(&part) {
+            return false;
+        }
+        let indexes = part.indexes();
+        if self.received.contains(&indexes) {
+            return false;
+        }
+        self.received.insert(indexes);
+        if part.is_simple() {
+            self.process_simple(part);
+        } else {
+            self.process_complex(part);
+        }
+        true
+    }
+
+    pub fn process_simple(&mut self, part: Part) {
+        assert_eq!(part.indexes().len(), 1);
+        let index = part.indexes()[0];
+        self.decoded.insert(index, part.clone());
+        self.queue.push_back((index, part));
+        self.process_queue();
+    }
+
+    pub fn process_queue(&mut self) {
+        while !self.queue.is_empty() {
+            let (index, simple) = self.queue.pop_front().unwrap();
+            let mut to_process = vec![];
+            for indexes in self.buffer.keys() {
+                if indexes.iter().any(|idx| idx == &index) {
+                    to_process.push(indexes.clone());
+                }
+            }
+            for indexes in to_process {
+                let mut part = self.buffer.remove(&indexes).unwrap();
+                let mut new_indexes = indexes.clone();
+                let to_remove = indexes.iter().position(|x| *x == index).unwrap();
+                new_indexes.remove(to_remove);
+                part.data = xor(&part.data, &simple.data);
+                if new_indexes.len() == 1 {
+                    self.decoded.insert(new_indexes[0], part.clone());
+                    self.queue.push_back((new_indexes[0], part));
+                } else {
+                    self.buffer.insert(new_indexes, part);
+                }
+            }
+        }
+    }
+
+    pub fn process_complex(&mut self, mut part: Part) {
+        let mut indexes = part.indexes();
+        let mut to_remove = vec![];
+        for index in indexes.clone() {
+            if self.decoded.keys().any(|k| *k == index) {
+                to_remove.push(index);
+            }
+        }
+        if indexes.len() == to_remove.len() {
+            return;
+        }
+        for remove in to_remove {
+            let idx_to_remove = indexes.iter().position(|x| *x == remove).unwrap();
+            indexes.remove(idx_to_remove);
+            part.data = xor(&part.data, &self.decoded.get(&remove).unwrap().data);
+        }
+        if indexes.len() == 1 {
+            self.decoded.insert(indexes[0], part.clone());
+            self.queue.push_back((indexes[0], part));
+        } else {
+            self.buffer.insert(indexes, part);
+        }
+    }
+
+    #[must_use]
+    pub fn complete(&self) -> bool {
+        self.message_length != 0 && self.decoded.len() == self.sequence_count
+    }
+
+    pub fn validate(&mut self, part: &Part) -> bool {
+        if self.received.is_empty() {
+            self.sequence_count = part.sequence_count;
+            self.message_length = part.message_length;
+            self.checksum = part.checksum;
+            self.fragment_length = part.data.len();
+        } else {
+            if part.sequence_count != self.sequence_count {
+                return false;
+            }
+            if part.message_length != self.message_length {
+                return false;
+            }
+            if part.checksum != self.checksum {
+                return false;
+            }
+            if part.data.len() != self.fragment_length {
+                return false;
+            }
+        }
+        true
+    }
+
+    pub fn message(&self) -> Result<Vec<u8>, &'static str> {
+        if !self.complete() {
+            return Err("not yet complete");
+        }
+        let combined = (0..self.sequence_count)
+            .map(|idx| self.decoded.get(&idx).unwrap().data.clone())
+            .fold(vec![], |a, b| [a, b].concat());
+        if !combined[self.message_length..]
+            .to_vec()
+            .iter()
+            .all(|x| *x == 0)
+        {
+            return Err("invalid padding detected");
+        }
+        Ok(combined[..self.message_length].to_vec())
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Part {
+    sequence: usize,
+    sequence_count: usize,
+    message_length: usize,
+    checksum: u32,
+    data: Vec<u8>,
 }
 
 impl std::fmt::Display for Part {
@@ -63,6 +215,16 @@ impl std::fmt::Display for Part {
 }
 
 impl Part {
+    #[must_use]
+    pub fn indexes(&self) -> Vec<usize> {
+        choose_fragments(self.sequence, self.sequence_count, self.checksum)
+    }
+
+    #[must_use]
+    pub fn is_simple(&self) -> bool {
+        self.indexes().len() == 1
+    }
+
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
     pub fn cbor(&self) -> String {
@@ -284,10 +446,26 @@ mod tests {
         let message = crate::xoshiro::test_utils::make_message("Wolf", 256);
         let mut encoder = Encoder::new(&message, 30);
         let mut generated_parts_count = 0;
-        while !encoder.is_complete() {
+        while !encoder.complete() {
             encoder.next_part();
             generated_parts_count += 1;
         }
         assert_eq!(encoder.parts.len(), generated_parts_count);
+    }
+
+    #[test]
+    fn test_decoder() {
+        let seed = "Wolf";
+        let message_size = 32767;
+        let max_fragment_length = 1000;
+
+        let message = crate::xoshiro::test_utils::make_message(seed, message_size);
+        let mut encoder = Encoder::new(&message, max_fragment_length);
+        let mut decoder = Decoder::default();
+        while !decoder.complete() {
+            let part = encoder.next_part();
+            let _ = decoder.receive(part);
+        }
+        assert_eq!(decoder.message().unwrap(), message);
     }
 }
