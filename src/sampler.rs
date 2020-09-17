@@ -1,16 +1,12 @@
 pub struct Weighted {
     aliases: Vec<u32>,
     probs: Vec<f64>,
-    xoshiro: crate::xoshiro::Xoshiro256,
 }
 
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_precision_loss)]
 impl Weighted {
-    pub fn new(
-        mut weights: Vec<f64>,
-        xoshiro: crate::xoshiro::Xoshiro256,
-    ) -> Result<Self, &'static str> {
+    pub fn new(mut weights: Vec<f64>) -> Result<Self, &'static str> {
         if weights.iter().any(|p| *p < 0.0) {
             return Err("negative probability encountered");
         }
@@ -59,17 +55,13 @@ impl Weighted {
             probs[a] = 1.0;
         }
 
-        Ok(Self {
-            aliases,
-            probs,
-            xoshiro,
-        })
+        Ok(Self { aliases, probs })
     }
 
     #[allow(clippy::should_implement_trait)]
-    pub fn next(&mut self) -> u32 {
-        let r1 = self.xoshiro.next_double();
-        let r2 = self.xoshiro.next_double();
+    pub fn next(&mut self, xoshiro: &mut crate::xoshiro::Xoshiro256) -> u32 {
+        let r1 = xoshiro.next_double();
+        let r2 = xoshiro.next_double();
         let n = self.probs.len();
         let i = (n as f64 * r1) as usize;
         if r2 < self.probs[i] {
@@ -80,16 +72,6 @@ impl Weighted {
     }
 }
 
-pub fn choose_degree(
-    length: usize,
-    xoshiro: crate::xoshiro::Xoshiro256,
-) -> Result<u32, &'static str> {
-    #[allow(clippy::cast_precision_loss)]
-    let degree_weights: Vec<f64> = (1..=length).map(|x| 1.0 / x as f64).collect();
-    let mut sampler = Weighted::new(degree_weights, xoshiro)?;
-    Ok(sampler.next() + 1)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -97,8 +79,8 @@ mod tests {
     #[test]
     fn test_sampler() {
         let weights = vec![1.0, 2.0, 4.0, 8.0];
-        let xoshiro = crate::xoshiro::Xoshiro256::from("Wolf");
-        let mut sampler = Weighted::new(weights, xoshiro).unwrap();
+        let mut xoshiro = crate::xoshiro::Xoshiro256::from("Wolf");
+        let mut sampler = Weighted::new(weights).unwrap();
 
         let expected_samples = vec![
             3, 3, 3, 3, 3, 3, 3, 0, 2, 3, 3, 3, 3, 1, 2, 2, 1, 3, 3, 2, 3, 3, 1, 1, 2, 1, 1, 3, 1,
@@ -121,7 +103,7 @@ mod tests {
             3, 3, 3, 0, 3, 3, 2,
         ];
         for e in expected_samples {
-            assert_eq!(sampler.next(), e);
+            assert_eq!(sampler.next(&mut xoshiro), e);
         }
     }
 
@@ -141,9 +123,9 @@ mod tests {
             3, 4, 10,
         ];
         for nonce in 1..=200 {
-            let xoshiro = crate::xoshiro::Xoshiro256::from(format!("Wolf-{}", nonce).as_str());
+            let mut xoshiro = crate::xoshiro::Xoshiro256::from(format!("Wolf-{}", nonce).as_str());
             assert_eq!(
-                choose_degree(fragments.len(), xoshiro).unwrap(),
+                xoshiro.choose_degree(fragments.len()).unwrap(),
                 expected_degrees[nonce - 1]
             );
         }

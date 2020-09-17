@@ -14,6 +14,16 @@ impl From<Xoshiro256StarStar> for Xoshiro256 {
     }
 }
 
+impl From<&[u8]> for Xoshiro256 {
+    fn from(from: &[u8]) -> Self {
+        let mut hasher = crypto::sha2::Sha256::new();
+        hasher.input(from);
+        let mut res = [0_u8; 32];
+        hasher.result(&mut res);
+        Self::from(res)
+    }
+}
+
 #[allow(clippy::cast_precision_loss)]
 #[allow(clippy::cast_possible_truncation)]
 impl Xoshiro256 {
@@ -40,12 +50,7 @@ impl Xoshiro256 {
 
     #[must_use]
     pub fn from_crc(bytes: &[u8]) -> Self {
-        let checksum = crc::crc32::checksum_ieee(bytes);
-        let mut hasher = crypto::sha2::Sha256::new();
-        hasher.input(&checksum.to_be_bytes());
-        let mut res = [0_u8; 32];
-        hasher.result(&mut res);
-        Self::from(res)
+        Self::from(&crc::crc32::checksum_ieee(bytes).to_be_bytes()[..])
     }
 
     pub fn shuffled<T>(&mut self, mut items: Vec<T>) -> Vec<T> {
@@ -56,6 +61,13 @@ impl Xoshiro256 {
             shuffled.push(item);
         }
         shuffled
+    }
+
+    pub fn choose_degree(&mut self, length: usize) -> Result<u32, &'static str> {
+        #[allow(clippy::cast_precision_loss)]
+        let degree_weights: Vec<f64> = (1..=length).map(|x| 1.0 / x as f64).collect();
+        let mut sampler = crate::sampler::Weighted::new(degree_weights)?;
+        Ok(sampler.next(self) + 1)
     }
 }
 
