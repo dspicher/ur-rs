@@ -468,4 +468,24 @@ mod tests {
         }
         assert_eq!(decoder.message().unwrap(), message);
     }
+
+    #[test]
+    fn test_decoder_skip_some_simple_fragments() {
+        let seed = "Wolf";
+        let message_size = 32767;
+        let max_fragment_length = 1000;
+
+        let message = crate::xoshiro::test_utils::make_message(seed, message_size);
+        let mut encoder = Encoder::new(&message, max_fragment_length);
+        let mut decoder = Decoder::default();
+        let mut skip = false;
+        while !decoder.complete() {
+            let part = encoder.next_part();
+            if !skip {
+                let _ = decoder.receive(part);
+            }
+            skip = !skip;
+        }
+        assert_eq!(decoder.message().unwrap(), message);
+    }
 }
