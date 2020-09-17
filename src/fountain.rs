@@ -38,6 +38,11 @@ pub fn choose_fragments(sequence: usize, fragment_count: usize, checksum: u32) -
     shuffled
 }
 
+#[must_use]
+pub fn xor(v1: &[u8], v2: &[u8]) -> Vec<u8> {
+    v1.iter().zip(v2.iter()).map(|(&x1, &x2)| x1 ^ x2).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -117,5 +122,17 @@ mod tests {
             indexes.sort();
             assert_eq!(indexes, expected_fragment_indexes[seq_num - 1]);
         }
+    }
+
+    #[test]
+    fn test_xor() {
+        let mut rng = crate::xoshiro::Xoshiro256::from("Wolf");
+        let data1 = rng.next_bytes(10);
+        assert_eq!(hex::encode(&data1), "916ec65cf77cadf55cd7");
+        let data2 = rng.next_bytes(10);
+        assert_eq!(hex::encode(&data2), "f9cda1a1030026ddd42e");
+        let data3 = xor(&data1, &data2);
+        assert_eq!(hex::encode(&data3), "68a367fdf47c8b2888f9");
+        assert_eq!(hex::encode(xor(&data3, &data1)), hex::encode(data2));
     }
 }
