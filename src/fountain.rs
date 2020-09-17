@@ -41,6 +41,11 @@ impl Encoder {
             data: mixed,
         }
     }
+
+    #[must_use]
+    pub fn is_complete(&self) -> bool {
+        self.current_sequence >= self.parts.len()
+    }
 }
 
 impl std::fmt::Display for Part {
@@ -272,5 +277,17 @@ mod tests {
         for e in expected_parts {
             assert_eq!(encoder.next_part().cbor(), e);
         }
+    }
+
+    #[test]
+    fn test_fountain_encoder_is_complete() {
+        let message = crate::xoshiro::test_utils::make_message("Wolf", 256);
+        let mut encoder = Encoder::new(&message, 30);
+        let mut generated_parts_count = 0;
+        while !encoder.is_complete() {
+            encoder.next_part();
+            generated_parts_count += 1;
+        }
+        assert_eq!(encoder.parts.len(), generated_parts_count);
     }
 }
