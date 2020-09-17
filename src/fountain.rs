@@ -22,6 +22,22 @@ pub fn join(data: Vec<Vec<u8>>, message_length: usize) -> Result<Vec<u8>, &'stat
     Ok(flattened)
 }
 
+#[must_use]
+pub fn choose_fragments(sequence: usize, fragment_count: usize, checksum: u32) -> Vec<usize> {
+    if sequence <= fragment_count {
+        return vec![sequence - 1];
+    }
+    #[allow(clippy::cast_possible_truncation)]
+    let mut seed: Vec<u8> = (sequence as u32).to_be_bytes().to_vec();
+    seed.extend((checksum as u32).to_be_bytes().to_vec());
+    let mut xoshiro = crate::xoshiro::Xoshiro256::from(seed.as_slice());
+    let degree = xoshiro.choose_degree(fragment_count).unwrap();
+    let indexes = (0..fragment_count).collect();
+    let mut shuffled = xoshiro.shuffled(indexes);
+    shuffled.truncate(degree as usize);
+    shuffled
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -56,5 +72,50 @@ mod tests {
         }
         let rejoined = join(fragments, message.len()).unwrap();
         assert_eq!(rejoined, message);
+    }
+
+    #[test]
+    fn test_choose_fragments() {
+        let message = crate::xoshiro::test_utils::make_message("Wolf", 1024);
+        let checksum = crc::crc32::checksum_ieee(&message);
+        let fragment_length = crate::fountain::fragment_length(message.len(), 100);
+        let fragments = crate::fountain::partition(message, fragment_length);
+        let expected_fragment_indexes = vec![
+            vec![0],
+            vec![1],
+            vec![2],
+            vec![3],
+            vec![4],
+            vec![5],
+            vec![6],
+            vec![7],
+            vec![8],
+            vec![9],
+            vec![10],
+            vec![9],
+            vec![2, 5, 6, 8, 9, 10],
+            vec![8],
+            vec![1, 5],
+            vec![1],
+            vec![0, 2, 4, 5, 8, 10],
+            vec![5],
+            vec![2],
+            vec![2],
+            vec![0, 1, 3, 4, 5, 7, 9, 10],
+            vec![0, 1, 2, 3, 5, 6, 8, 9, 10],
+            vec![0, 2, 4, 5, 7, 8, 9, 10],
+            vec![3, 5],
+            vec![4],
+            vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            vec![0, 1, 3, 4, 5, 6, 7, 9, 10],
+            vec![6],
+            vec![5, 6],
+            vec![7],
+        ];
+        for seq_num in 1..=30 {
+            let mut indexes = crate::fountain::choose_fragments(seq_num, fragments.len(), checksum);
+            indexes.sort();
+            assert_eq!(indexes, expected_fragment_indexes[seq_num - 1]);
+        }
     }
 }
