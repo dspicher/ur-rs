@@ -227,7 +227,7 @@ impl Part {
 
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
-    pub fn cbor(&self) -> String {
+    pub fn cbor(&self) -> Vec<u8> {
         let mut e = cbor::Encoder::from_memory();
         e.encode(vec![cbor::Cbor::Array(vec![
             cbor::Cbor::Unsigned(cbor::CborUnsigned::UInt32(self.sequence as u32)),
@@ -237,7 +237,7 @@ impl Part {
             cbor::Cbor::Bytes(cbor::CborBytes(self.data.clone())),
         ])])
         .unwrap();
-        hex::encode(e.as_bytes())
+        e.as_bytes().to_vec()
     }
 }
 
@@ -437,7 +437,7 @@ mod tests {
             "8514091901001a0167aa07581de055c2433562184fa71b4be94f262e200f01c6f74c284b0dc6fae6673f",
         ];
         for e in expected_parts {
-            assert_eq!(encoder.next_part().cbor(), e);
+            assert_eq!(hex::encode(encoder.next_part().cbor()), e);
         }
     }
 
