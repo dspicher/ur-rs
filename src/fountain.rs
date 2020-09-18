@@ -215,6 +215,65 @@ impl std::fmt::Display for Part {
 }
 
 impl Part {
+    pub fn from_cbor(cbor: Vec<u8>) -> Result<Self, &'static str> {
+        let mut decoder = cbor::Decoder::from_bytes(cbor);
+        let items: Vec<cbor::Cbor> = decoder.items().collect::<Result<_, _>>().unwrap();
+        if items.len() != 1 {
+            return Err("invalid cbor length for Part");
+        }
+        let items = match items.get(0).unwrap() {
+            cbor::Cbor::Array(a) => a,
+            _ => return Err("invalid top-level item"),
+        };
+        let sequence: usize = match items.get(0).unwrap() {
+            cbor::Cbor::Unsigned(t) => match t {
+                cbor::CborUnsigned::UInt8(u) => *u as usize,
+                cbor::CborUnsigned::UInt16(u) => *u as usize,
+                cbor::CborUnsigned::UInt32(u) => *u as usize,
+                _ => return Err("unexpected item at position 0"),
+            },
+            _ => return Err("unexpected item at position 0"),
+        };
+        let sequence_count: usize = match items.get(1).unwrap() {
+            cbor::Cbor::Unsigned(t) => match t {
+                cbor::CborUnsigned::UInt8(u) => *u as usize,
+                cbor::CborUnsigned::UInt16(u) => *u as usize,
+                cbor::CborUnsigned::UInt32(u) => *u as usize,
+                _ => return Err("unexpected item at position 1"),
+            },
+            _ => return Err("unexpected item at position 1"),
+        };
+        let message_length: usize = match items.get(2).unwrap() {
+            cbor::Cbor::Unsigned(t) => match t {
+                cbor::CborUnsigned::UInt8(u) => *u as usize,
+                cbor::CborUnsigned::UInt16(u) => *u as usize,
+                cbor::CborUnsigned::UInt32(u) => *u as usize,
+                _ => return Err("unexpected item at position 2"),
+            },
+            _ => return Err("unexpected item at position 2"),
+        };
+        let checksum: u32 = match items.get(3).unwrap() {
+            cbor::Cbor::Unsigned(t) => match t {
+                cbor::CborUnsigned::UInt8(u) => u32::from(*u),
+                cbor::CborUnsigned::UInt16(u) => u32::from(*u),
+                cbor::CborUnsigned::UInt32(u) => *u,
+                _ => return Err("unexpected item at position 3"),
+            },
+            _ => return Err("unexpected item at position 3"),
+        };
+        let data: Vec<u8> = match &items.get(4).unwrap() {
+            cbor::Cbor::Bytes(b) => b.to_vec(),
+            _ => return Err("unexpected item at position 4"),
+        };
+        Ok(Self {
+            sequence,
+            sequence_count,
+            message_length,
+            checksum,
+            data,
+        })
+    }
+
     #[must_use]
     pub fn indexes(&self) -> Vec<usize> {
         choose_fragments(self.sequence, self.sequence_count, self.checksum)
@@ -487,5 +546,20 @@ mod tests {
             skip = !skip;
         }
         assert_eq!(decoder.message().unwrap(), message);
+    }
+
+    #[test]
+    fn test_fountain_cbor() {
+        let part = Part {
+            sequence: 12,
+            sequence_count: 8,
+            message_length: 100,
+            checksum: 0x1234_5678,
+            data: vec![1, 5, 3, 3, 5],
+        };
+        let cbor = part.cbor();
+        let part2 = Part::from_cbor(cbor.clone()).unwrap();
+        let cbor2 = part2.cbor();
+        assert_eq!(cbor, cbor2);
     }
 }
