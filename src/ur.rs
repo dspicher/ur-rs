@@ -1,25 +1,12 @@
-#[derive(Debug, PartialEq)]
-pub struct UR {
-    r#type: String,
-    cbor: Vec<u8>,
-}
-
-impl UR {
-    #[must_use]
-    pub fn cbor(&self) -> &[u8] {
-        &self.cbor
-    }
-}
-
 pub struct Encoder {
     fountain: crate::fountain::Encoder,
 }
 
 impl Encoder {
     #[must_use]
-    pub fn encode(ur: &UR) -> String {
-        let body = crate::bytewords::encode(ur.cbor(), &crate::bytewords::Style::Minimal);
-        Self::encode_ur(&[ur.r#type.clone(), body])
+    pub fn encode(ur: &[u8]) -> String {
+        let body = crate::bytewords::encode(ur, &crate::bytewords::Style::Minimal);
+        Self::encode_ur(&["bytes".into(), body])
     }
 
     #[must_use]
@@ -48,13 +35,13 @@ impl Encoder {
 pub struct Decoder {}
 
 impl Decoder {
-    pub fn decode(value: &str) -> anyhow::Result<UR> {
+    pub fn decode(value: &str) -> anyhow::Result<Vec<u8>> {
         match value.strip_prefix("ur:") {
             Some(val) => match val.strip_prefix("bytes/") {
-                Some(v) => Ok(UR {
-                    r#type: "bytes".into(),
-                    cbor: crate::bytewords::decode(v, &crate::bytewords::Style::Minimal)?,
-                }),
+                Some(v) => Ok(crate::bytewords::decode(
+                    v,
+                    &crate::bytewords::Style::Minimal,
+                )?),
                 None => Err(anyhow::anyhow!("Invalid type")),
             },
             None => Err(anyhow::anyhow!("Invalid Scheme")),
@@ -66,16 +53,13 @@ impl Decoder {
 mod tests {
     use super::*;
 
-    fn make_message_ur(length: usize, seed: &str) -> UR {
+    fn make_message_ur(length: usize, seed: &str) -> Vec<u8> {
         let message = crate::xoshiro::test_utils::make_message(seed, length);
         let mut encoder = cbor::Encoder::from_memory();
         encoder
             .encode(vec![cbor::Cbor::Bytes(cbor::CborBytes(message))])
             .unwrap();
-        UR {
-            r#type: "bytes".into(),
-            cbor: encoder.as_bytes().to_vec(),
-        }
+        encoder.as_bytes().to_vec()
     }
 
     #[test]
@@ -91,7 +75,7 @@ mod tests {
     #[test]
     fn test_ur_encoder() {
         let ur = make_message_ur(256, "Wolf");
-        let mut encoder = Encoder::new(ur.cbor(), 30);
+        let mut encoder = Encoder::new(&ur, 30);
         let expected = vec![
             "ur:bytes/1-9/ltadascfadaxcywenbpljkhdcahkadaemejtswhhylkepmykhhtsytsnoyoyaxaedsuttydmmhhpktpmsrjtdkgsltgh",
             "ur:bytes/2-9/ltaoascfadaxcywenbpljkhdcagwdpfnsboxgwlbaawzuefywkdplrsrjynbvygabwjldapfcsgmghhkhstlrdcxaefz",
