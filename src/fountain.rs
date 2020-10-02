@@ -298,6 +298,11 @@ impl Part {
         .unwrap();
         e.as_bytes().to_vec()
     }
+
+    #[must_use]
+    pub fn sequence_id(&self) -> String {
+        format!("{}-{}", self.sequence, self.sequence_count)
+    }
 }
 
 #[must_use]
