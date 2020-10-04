@@ -32,20 +32,42 @@ impl Encoder {
     }
 }
 
-pub struct Decoder {}
+#[derive(std::default::Default)]
+pub struct Decoder {
+    fountain: crate::fountain::Decoder,
+}
 
 impl Decoder {
     pub fn decode(value: &str) -> anyhow::Result<Vec<u8>> {
         match value.strip_prefix("ur:") {
             Some(val) => match val.strip_prefix("bytes/") {
                 Some(v) => Ok(crate::bytewords::decode(
-                    v,
+                    match v.find('/') {
+                        None => v,
+                        Some(idx) => &v[idx + 1..],
+                    },
                     &crate::bytewords::Style::Minimal,
                 )?),
                 None => Err(anyhow::anyhow!("Invalid type")),
             },
             None => Err(anyhow::anyhow!("Invalid Scheme")),
         }
+    }
+
+    pub fn receive(&mut self, value: &str) -> anyhow::Result<()> {
+        let decoded = Self::decode(value)?;
+        self.fountain
+            .receive(crate::fountain::Part::from_cbor(decoded)?);
+        Ok(())
+    }
+
+    #[must_use]
+    pub fn complete(&self) -> bool {
+        self.fountain.complete()
+    }
+
+    pub fn message(&self) -> anyhow::Result<Vec<u8>> {
+        self.fountain.message()
     }
 }
 
@@ -102,5 +124,18 @@ mod tests {
             dbg!(e);
             assert_eq!(encoder.next_part(), e);
         }
+    }
+
+    #[test]
+    fn test_multipart_ur() {
+        let ur = make_message_ur(32767, "Wolf");
+        let mut encoder = Encoder::new(&ur, 1000);
+        let mut decoder = Decoder::default();
+        while !decoder.complete() {
+            let part = encoder.next_part();
+            dbg!(&part);
+            decoder.receive(&part).unwrap();
+        }
+        assert_eq!(decoder.message().unwrap(), ur);
     }
 }
