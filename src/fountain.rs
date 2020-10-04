@@ -173,9 +173,9 @@ impl Decoder {
         true
     }
 
-    pub fn message(&self) -> Result<Vec<u8>, &'static str> {
+    pub fn message(&self) -> anyhow::Result<Vec<u8>> {
         if !self.complete() {
-            return Err("not yet complete");
+            return Err(anyhow::anyhow!("not yet complete"));
         }
         let combined = (0..self.sequence_count)
             .map(|idx| self.decoded.get(&idx).unwrap().data.clone())
@@ -185,7 +185,7 @@ impl Decoder {
             .iter()
             .all(|x| *x == 0)
         {
-            return Err("invalid padding detected");
+            return Err(anyhow::anyhow!("invalid padding detected"));
         }
         Ok(combined[..self.message_length].to_vec())
     }
@@ -215,55 +215,55 @@ impl std::fmt::Display for Part {
 }
 
 impl Part {
-    pub fn from_cbor(cbor: Vec<u8>) -> Result<Self, &'static str> {
+    pub fn from_cbor(cbor: Vec<u8>) -> anyhow::Result<Self> {
         let mut decoder = cbor::Decoder::from_bytes(cbor);
         let items: Vec<cbor::Cbor> = decoder.items().collect::<Result<_, _>>().unwrap();
         if items.len() != 1 {
-            return Err("invalid cbor length for Part");
+            return Err(anyhow::anyhow!("invalid cbor length for Part"));
         }
         let items = match items.get(0).unwrap() {
             cbor::Cbor::Array(a) => a,
-            _ => return Err("invalid top-level item"),
+            _ => return Err(anyhow::anyhow!("invalid top-level item")),
         };
         let sequence: usize = match items.get(0).unwrap() {
             cbor::Cbor::Unsigned(t) => match t {
                 cbor::CborUnsigned::UInt8(u) => *u as usize,
                 cbor::CborUnsigned::UInt16(u) => *u as usize,
                 cbor::CborUnsigned::UInt32(u) => *u as usize,
-                _ => return Err("unexpected item at position 0"),
+                _ => return Err(anyhow::anyhow!("unexpected item at position 0")),
             },
-            _ => return Err("unexpected item at position 0"),
+            _ => return Err(anyhow::anyhow!("unexpected item at position 0")),
         };
         let sequence_count: usize = match items.get(1).unwrap() {
             cbor::Cbor::Unsigned(t) => match t {
                 cbor::CborUnsigned::UInt8(u) => *u as usize,
                 cbor::CborUnsigned::UInt16(u) => *u as usize,
                 cbor::CborUnsigned::UInt32(u) => *u as usize,
-                _ => return Err("unexpected item at position 1"),
+                _ => return Err(anyhow::anyhow!("unexpected item at position 1")),
             },
-            _ => return Err("unexpected item at position 1"),
+            _ => return Err(anyhow::anyhow!("unexpected item at position 1")),
         };
         let message_length: usize = match items.get(2).unwrap() {
             cbor::Cbor::Unsigned(t) => match t {
                 cbor::CborUnsigned::UInt8(u) => *u as usize,
                 cbor::CborUnsigned::UInt16(u) => *u as usize,
                 cbor::CborUnsigned::UInt32(u) => *u as usize,
-                _ => return Err("unexpected item at position 2"),
+                _ => return Err(anyhow::anyhow!("unexpected item at position 2")),
             },
-            _ => return Err("unexpected item at position 2"),
+            _ => return Err(anyhow::anyhow!("unexpected item at position 2")),
         };
         let checksum: u32 = match items.get(3).unwrap() {
             cbor::Cbor::Unsigned(t) => match t {
                 cbor::CborUnsigned::UInt8(u) => u32::from(*u),
                 cbor::CborUnsigned::UInt16(u) => u32::from(*u),
                 cbor::CborUnsigned::UInt32(u) => *u,
-                _ => return Err("unexpected item at position 3"),
+                _ => return Err(anyhow::anyhow!("unexpected item at position 3")),
             },
-            _ => return Err("unexpected item at position 3"),
+            _ => return Err(anyhow::anyhow!("unexpected item at position 3")),
         };
         let data: Vec<u8> = match &items.get(4).unwrap() {
             cbor::Cbor::Bytes(b) => b.to_vec(),
-            _ => return Err("unexpected item at position 4"),
+            _ => return Err(anyhow::anyhow!("unexpected item at position 4")),
         };
         Ok(Self {
             sequence,
