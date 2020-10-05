@@ -93,28 +93,28 @@ mod tests {
         let input = vec![0, 1, 2, 128, 255];
         assert_eq!(
             encode(&input, &Style::Standard),
-            "able acid also lava zero jade need echo taxi"
+            "able acid also lava zoom jade need echo taxi"
         );
         assert_eq!(
             encode(&input, &Style::Uri),
-            "able-acid-also-lava-zero-jade-need-echo-taxi"
+            "able-acid-also-lava-zoom-jade-need-echo-taxi"
         );
-        assert_eq!(encode(&input, &Style::Minimal), "aeadaolazojendeoti");
+        assert_eq!(encode(&input, &Style::Minimal), "aeadaolazmjendeoti");
 
         assert_eq!(
             decode(
-                "able acid also lava zero jade need echo taxi",
+                "able acid also lava zoom jade need echo taxi",
                 &Style::Standard
             )
             .unwrap(),
             input
         );
         assert_eq!(
-            decode("able-acid-also-lava-zero-jade-need-echo-taxi", &Style::Uri).unwrap(),
+            decode("able-acid-also-lava-zoom-jade-need-echo-taxi", &Style::Uri).unwrap(),
             input
         );
         assert_eq!(
-            decode("aeadaolazojendeoti", &Style::Minimal).unwrap(),
+            decode("aeadaolazmjendeoti", &Style::Minimal).unwrap(),
             input
         );
 
@@ -159,22 +159,22 @@ mod tests {
         ];
 
         let encoded = "yank toys bulb skew when warm free fair tent swan \
-                       open brag mint noon jury lion view tiny brew note \
-                       body data webs what zone bald join runs data whiz \
-                       days keys user diet news ruby whiz zoom menu surf \
+                       open brag mint noon jury list view tiny brew note \
+                       body data webs what zinc bald join runs data whiz \
+                       days keys user diet news ruby whiz zone menu surf \
                        flew omit trip pose runs fund part even crux fern \
                        math visa tied loud redo silk curl jugs hard beta \
                        next cost puma drum acid junk swan free very mint \
-                       flap warm fact math flap what list free jugs yell \
+                       flap warm fact math flap what limp free jugs yell \
                        fish epic whiz open numb math city belt glow wave \
-                       list fuel grim free zoom open love diet gyro cats \
+                       limp fuel grim free zone open love diet gyro cats \
                        fizz holy city puff";
 
-        let encoded_minimal = "yktsbbswwnwmfefrttsnonbgmtnnjylnvwtybwne\
-                               bydawswtzebdjnrsdawzdsksurdtnsrywzzmmusf\
+        let encoded_minimal = "yktsbbswwnwmfefrttsnonbgmtnnjyltvwtybwne\
+                               bydawswtzcbdjnrsdawzdsksurdtnsrywzzemusf\
                                fwottppersfdptencxfnmhvatdldroskcljshdba\
-                               ntctpadmadjksnfevymtfpwmftmhfpwtltfejsyl\
-                               fhecwzonnbmhcybtgwweltflgmfezmonledtgocs\
+                               ntctpadmadjksnfevymtfpwmftmhfpwtlpfejsyl\
+                               fhecwzonnbmhcybtgwwelpflgmfezeonledtgocs\
                                fzhycypf";
 
         assert_eq!(decode(encoded, &Style::Standard).unwrap(), input.to_vec());

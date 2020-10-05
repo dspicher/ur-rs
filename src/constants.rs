@@ -16,7 +16,7 @@ pub const WORDS: [&str; 256] = [
     "iris", "iron", "item", "jade", "jazz", "join", "jolt", "jowl",
     "judo", "jugs", "jump", "junk", "jury", "keep", "keno", "kept",
     "keys", "kick", "kiln", "king", "kite", "kiwi", "knob", "lamb",
-    "lava", "lazy", "leaf", "legs", "liar", "list", "limp", "lion",
+    "lava", "lazy", "leaf", "legs", "liar", "limp", "lion", "list",
     "logo", "loud", "love", "luau", "luck", "lung", "main", "many",
     "math", "maze", "memo", "menu", "meow", "mild", "mint", "miss",
     "monk", "nail", "navy", "need", "news", "next", "noon", "note",
@@ -31,7 +31,7 @@ pub const WORDS: [&str; 256] = [
     "vast", "very", "veto", "vial", "vibe", "view", "visa", "void",
     "vows", "wall", "wand", "warm", "wasp", "wave", "waxy", "webs",
     "what", "when", "whiz", "wolf", "work", "yank", "yawn", "yell",
-    "yoga", "yurt", "zaps", "zest", "zinc", "zone", "zoom", "zero",
+    "yoga", "yurt", "zaps", "zero", "zest", "zinc", "zone", "zoom",
 ];
 
 pub const WORD_IDXS: phf::Map<&'static str, u8> = phf::phf_map! {
@@ -168,9 +168,9 @@ pub const WORD_IDXS: phf::Map<&'static str, u8> = phf::phf_map! {
     "leaf" => 130,
     "legs" => 131,
     "liar" => 132,
-    "list" => 133,
-    "limp" => 134,
-    "lion" => 135,
+    "limp" => 133,
+    "lion" => 134,
+    "list" => 135,
     "logo" => 136,
     "loud" => 137,
     "love" => 138,
@@ -286,11 +286,11 @@ pub const WORD_IDXS: phf::Map<&'static str, u8> = phf::phf_map! {
     "yoga" => 248,
     "yurt" => 249,
     "zaps" => 250,
-    "zest" => 251,
-    "zinc" => 252,
-    "zone" => 253,
-    "zoom" => 254,
-    "zero" => 255,
+    "zero" => 251,
+    "zest" => 252,
+    "zinc" => 253,
+    "zone" => 254,
+    "zoom" => 255,
 };
 
 #[rustfmt::skip]
@@ -311,7 +311,7 @@ pub const MINIMALS: [&str; 256] = [
     "is", "in", "im", "je", "jz", "jn", "jt", "jl",
     "jo", "js", "jp", "jk", "jy", "kp", "ko", "kt",
     "ks", "kk", "kn", "kg", "ke", "ki", "kb", "lb",
-    "la", "ly", "lf", "ls", "lr", "lt", "lp", "ln",
+    "la", "ly", "lf", "ls", "lr", "lp", "ln", "lt",
     "lo", "ld", "le", "lu", "lk", "lg", "mn", "my",
     "mh", "me", "mo", "mu", "mw", "md", "mt", "ms",
     "mk", "nl", "ny", "nd", "ns", "nt", "nn", "ne",
@@ -326,7 +326,7 @@ pub const MINIMALS: [&str; 256] = [
     "vt", "vy", "vo", "vl", "ve", "vw", "va", "vd",
     "vs", "wl", "wd", "wm", "wp", "we", "wy", "ws",
     "wt", "wn", "wz", "wf", "wk", "yk", "yn", "yl",
-    "ya", "yt", "zs", "zt", "zc", "ze", "zm", "zo",
+    "ya", "yt", "zs", "zo", "zt", "zc", "ze", "zm",
 ];
 
 pub const MINIMAL_IDXS: phf::Map<&'static str, u8> = phf::phf_map! {
@@ -463,9 +463,9 @@ pub const MINIMAL_IDXS: phf::Map<&'static str, u8> = phf::phf_map! {
     "lf" => 130,
     "ls" => 131,
     "lr" => 132,
-    "lt" => 133,
-    "lp" => 134,
-    "ln" => 135,
+    "lp" => 133,
+    "ln" => 134,
+    "lt" => 135,
     "lo" => 136,
     "ld" => 137,
     "le" => 138,
@@ -581,9 +581,9 @@ pub const MINIMAL_IDXS: phf::Map<&'static str, u8> = phf::phf_map! {
     "ya" => 248,
     "yt" => 249,
     "zs" => 250,
-    "zt" => 251,
-    "zc" => 252,
-    "ze" => 253,
-    "zm" => 254,
-    "zo" => 255,
+    "zo" => 251,
+    "zt" => 252,
+    "zc" => 253,
+    "ze" => 254,
+    "zm" => 255,
 };
