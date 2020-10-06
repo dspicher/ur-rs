@@ -510,12 +510,10 @@ mod tests {
     fn test_fountain_encoder_is_complete() {
         let message = crate::xoshiro::test_utils::make_message("Wolf", 256);
         let mut encoder = Encoder::new(&message, 30);
-        let mut generated_parts_count = 0;
-        while !encoder.complete() {
+        for _ in 0..encoder.parts.len() {
             encoder.next_part();
-            generated_parts_count += 1;
         }
-        assert_eq!(encoder.parts.len(), generated_parts_count);
+        assert!(encoder.complete());
     }
 
     #[test]
