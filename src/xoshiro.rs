@@ -23,6 +23,7 @@ impl From<&[u8]> for Xoshiro256 {
 
 #[allow(clippy::cast_precision_loss)]
 #[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)]
 impl Xoshiro256 {
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> u64 {

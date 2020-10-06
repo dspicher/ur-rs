@@ -308,6 +308,7 @@ impl Part {
 #[must_use]
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_precision_loss)]
+#[allow(clippy::cast_sign_loss)]
 pub fn fragment_length(data_length: usize, max_fragment_length: usize) -> usize {
     let fragment_count = data_length / max_fragment_length + 1;
     (data_length as f64 / fragment_count as f64).ceil() as usize

@@ -1,5 +1,3 @@
-use crate::constants::*;
-
 #[derive(PartialEq)]
 pub enum Style {
     Standard,
@@ -23,7 +21,7 @@ pub fn decode(encoded: &str, style: &Style) -> Result<Vec<u8>, Error> {
     };
     let mut data = vec![];
     for word in encoded.split(separator) {
-        match WORD_IDXS.get(word) {
+        match crate::constants::WORD_IDXS.get(word) {
             Some(idx) => data.push(*idx),
             None => return Err(Error::InvalidWord),
         }
@@ -35,7 +33,7 @@ fn decode_minimal(encoded: &str) -> Result<Vec<u8>, Error> {
     let mut data = vec![];
     for idx in (0..encoded.len()).step_by(2) {
         let substr = &encoded[idx..idx + 2];
-        match MINIMAL_IDXS.get(substr) {
+        match crate::constants::MINIMAL_IDXS.get(substr) {
             Some(idx) => data.push(*idx),
             None => return Err(Error::InvalidWord),
         }
@@ -67,8 +65,12 @@ pub fn encode(data: &[u8], style: &Style) -> String {
     let checksum = crc::crc32::checksum_ieee(data).to_be_bytes();
     let data = data.iter().chain(checksum.iter());
     let words: Vec<&str> = match style {
-        Style::Standard | Style::Uri => data.map(|b| WORDS[*b as usize]).collect(),
-        Style::Minimal => data.map(|b| MINIMALS[*b as usize]).collect(),
+        Style::Standard | Style::Uri => {
+            data.map(|b| crate::constants::WORDS[*b as usize]).collect()
+        }
+        Style::Minimal => data
+            .map(|b| crate::constants::MINIMALS[*b as usize])
+            .collect(),
     };
     let separator = match style {
         Style::Standard => " ",

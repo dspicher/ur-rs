@@ -59,6 +59,7 @@ impl Weighted {
     }
 
     #[allow(clippy::should_implement_trait)]
+    #[allow(clippy::cast_sign_loss)]
     pub fn next(&mut self, xoshiro: &mut crate::xoshiro::Xoshiro256) -> u32 {
         let r1 = xoshiro.next_double();
         let r2 = xoshiro.next_double();

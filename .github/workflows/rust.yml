@@ -23,7 +23,7 @@ jobs:
     - name: Check sorted dependencies
       run: cargo sort-ck
     - name: Clippy
-      run: cargo clippy --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -A clippy::missing-errors-doc -A clippy::wildcard-imports -A clippy::used-underscore-binding -A clippy::cast-sign-loss -A clippy::default-trait-access
+      run: cargo clippy --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -A clippy::missing-errors-doc
     - name: Build
       run: cargo build
     - name: Run tests
