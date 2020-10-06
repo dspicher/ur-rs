@@ -1,6 +1,7 @@
 Uniform Resources in Rust
 =========================
-[<img alt="build status" src="https://img.shields.io/github/workflow/status/dspicher/ur-rs/Rust/master?style=for-the-badge&logo=github" height="20">](https://github.com/dspicher/ur-rs/actions)
+[<img alt="build status" src="https://img.shields.io/github/workflow/status/dspicher/ur-rs/Rust/master?logo=github" height="20">](https://github.com/dspicher/ur-rs/actions)
+[<img alt="build status" src="https://img.shields.io/codecov/c/gh/dspicher/ur-rs?logo=codecov" height="20">](https://codecov.io/gh/dspicher/ur-rs)
 
 ## Getting started
 Until this crate is published on crates.io, include the following in your `Cargo.toml`:
