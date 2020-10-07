@@ -40,7 +40,6 @@ impl Encoder {
     }
 }
 
-#[derive(Debug)]
 pub struct Decoder {
     decoded: std::collections::HashMap<usize, Part>,
     received: std::collections::HashSet<Vec<usize>>,
@@ -191,7 +190,7 @@ impl Decoder {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Part {
     sequence: usize,
     sequence_count: usize,
