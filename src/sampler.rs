@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct Weighted {
     aliases: Vec<u32>,
     probs: Vec<f64>,
@@ -130,5 +131,17 @@ mod tests {
                 expected_degrees[nonce - 1]
             );
         }
+    }
+
+    #[test]
+    fn test_weight_errors() {
+        assert_eq!(
+            Weighted::new(vec![2.0, -1.0]).unwrap_err().to_string(),
+            "negative probability encountered"
+        );
+        assert_eq!(
+            Weighted::new(vec![0.0]).unwrap_err().to_string(),
+            "probabilities don't sum to a positive value"
+        );
     }
 }
