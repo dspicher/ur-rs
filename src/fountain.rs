@@ -190,7 +190,7 @@ impl Decoder {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Part {
     sequence: usize,
     sequence_count: usize,
@@ -216,7 +216,10 @@ impl std::fmt::Display for Part {
 impl Part {
     pub fn from_cbor(cbor: Vec<u8>) -> anyhow::Result<Self> {
         let mut decoder = cbor::Decoder::from_bytes(cbor);
-        let items: Vec<cbor::Cbor> = decoder.items().collect::<Result<_, _>>().unwrap();
+        let items: Vec<cbor::Cbor> = match decoder.items().collect::<Result<_, _>>() {
+            Ok(i) => i,
+            Err(_) => return Err(anyhow::anyhow!("invalid cbor serialization for Part")),
+        };
         if items.len() != 1 {
             return Err(anyhow::anyhow!("invalid cbor length for Part"));
         }
@@ -224,6 +227,9 @@ impl Part {
             cbor::Cbor::Array(a) => a,
             _ => return Err(anyhow::anyhow!("invalid top-level item")),
         };
+        if items.len() != 5 {
+            return Err(anyhow::anyhow!("invalid cbor array length"));
+        }
         let sequence: usize = match items.get(0).unwrap() {
             cbor::Cbor::Unsigned(t) => match t {
                 cbor::CborUnsigned::UInt8(u) => *u as usize,
@@ -590,5 +596,74 @@ mod tests {
         let part2 = Part::from_cbor(cbor.clone()).unwrap();
         let cbor2 = part2.cbor();
         assert_eq!(cbor, cbor2);
+    }
+
+    #[test]
+    fn test_part_from_cbor_errors() {
+        // 0x18 is the first byte value that doesn't directly encode a u8,
+        // but implies a following value
+        assert_eq!(
+            Part::from_cbor(vec![0x18]).unwrap_err().to_string(),
+            "invalid cbor serialization for Part"
+        );
+        // a single cbor item is expected
+        assert_eq!(
+            Part::from_cbor(vec![0x1, 0x1]).unwrap_err().to_string(),
+            "invalid cbor length for Part"
+        );
+        // the top-level item must be an array
+        assert_eq!(
+            Part::from_cbor(vec![0x1]).unwrap_err().to_string(),
+            "invalid top-level item"
+        );
+        // the array must be of length five
+        assert_eq!(
+            Part::from_cbor(vec![0x84, 0x1, 0x2, 0x3, 0x4])
+                .unwrap_err()
+                .to_string(),
+            "invalid cbor array length"
+        );
+        assert_eq!(
+            Part::from_cbor(vec![0x86, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6])
+                .unwrap_err()
+                .to_string(),
+            "invalid cbor array length"
+        );
+        // the first item must be an unsigned integer
+        assert_eq!(
+            Part::from_cbor(vec![0x85, 0x41, 0x1, 0x2, 0x3, 0x4, 0x41, 0x1])
+                .unwrap_err()
+                .to_string(),
+            "unexpected item at position 0"
+        );
+        // the second item must be an unsigned integer
+        assert_eq!(
+            Part::from_cbor(vec![0x85, 0x1, 0x41, 0x2, 0x3, 0x4, 0x41, 0x1])
+                .unwrap_err()
+                .to_string(),
+            "unexpected item at position 1"
+        );
+        // the third item must be an unsigned integer
+        assert_eq!(
+            Part::from_cbor(vec![0x85, 0x1, 0x2, 0x41, 0x3, 0x4, 0x41, 0x1])
+                .unwrap_err()
+                .to_string(),
+            "unexpected item at position 2"
+        );
+        // the fourth item must be an unsigned integer
+        assert_eq!(
+            Part::from_cbor(vec![0x85, 0x1, 0x2, 0x3, 0x41, 0x4, 0x41, 0x1])
+                .unwrap_err()
+                .to_string(),
+            "unexpected item at position 3"
+        );
+        // the fifth item must be byte string
+        assert_eq!(
+            Part::from_cbor(vec![0x85, 0x1, 0x2, 0x3, 0x4, 0x5])
+                .unwrap_err()
+                .to_string(),
+            "unexpected item at position 4"
+        );
+        Part::from_cbor(vec![0x85, 0x1, 0x2, 0x3, 0x4, 0x41, 0x5]).unwrap();
     }
 }
