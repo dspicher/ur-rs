@@ -432,7 +432,7 @@ mod tests {
         ];
         for seq_num in 1..=30 {
             let mut indexes = crate::fountain::choose_fragments(seq_num, fragments.len(), checksum);
-            indexes.sort();
+            indexes.sort_unstable();
             assert_eq!(indexes, expected_fragment_indexes[seq_num - 1]);
         }
     }
