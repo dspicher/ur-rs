@@ -121,7 +121,6 @@ mod tests {
             "ur:bytes/20-9/lpbbascfadaxcywenbpljkhdcayapmrleeleaxpasfrtrdkncffwjyjzgyetdmlewtkpktgllepfrltataztksmhkbot",
         ];
         for e in expected {
-            dbg!(e);
             assert_eq!(encoder.next_part(), e);
         }
     }
@@ -133,7 +132,6 @@ mod tests {
         let mut decoder = Decoder::default();
         while !decoder.complete() {
             let part = encoder.next_part();
-            dbg!(&part);
             decoder.receive(&part).unwrap();
         }
         assert_eq!(decoder.message().unwrap(), ur);
