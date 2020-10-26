@@ -552,6 +552,32 @@ mod tests {
     }
 
     #[test]
+    fn test_decoder_receive_return_value() {
+        let seed = "Wolf";
+        let message_size = 1000;
+        let max_fragment_length = 10;
+
+        let message = crate::xoshiro::test_utils::make_message(seed, message_size);
+        let mut encoder = Encoder::new(&message, max_fragment_length);
+        let mut decoder = Decoder::default();
+        let part = encoder.next_part();
+        assert!(decoder.receive(part.clone()));
+        // same indexes
+        assert!(!decoder.receive(part));
+        // non-valid
+        let mut part = encoder.next_part();
+        part.checksum += 1;
+        assert!(!decoder.receive(part));
+        // decoder complete
+        while !decoder.complete() {
+            let part = encoder.next_part();
+            decoder.receive(part);
+        }
+        let part = encoder.next_part();
+        assert!(!decoder.receive(part));
+    }
+
+    #[test]
     fn test_fountain_cbor() {
         let part = Part {
             sequence: 12,
