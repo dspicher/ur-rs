@@ -136,4 +136,21 @@ mod tests {
         }
         assert_eq!(decoder.message().unwrap(), ur);
     }
+
+    #[test]
+    fn test_decoder() {
+        assert_eq!(
+            Decoder::decode("uhr:bytes/aeadaolazmjendeoti")
+                .unwrap_err()
+                .to_string(),
+            "Invalid Scheme"
+        );
+        assert_eq!(
+            Decoder::decode("ur:byts/aeadaolazmjendeoti")
+                .unwrap_err()
+                .to_string(),
+            "Invalid type"
+        );
+        Decoder::decode("ur:bytes/aeadaolazmjendeoti").unwrap();
+    }
 }
