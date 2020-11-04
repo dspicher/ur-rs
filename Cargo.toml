@@ -13,7 +13,7 @@ crc = "1.8.1"
 hex = "0.4.2"
 phf = { version = "0.8.0", features = ["macros"] }
 rand_xoshiro = "0.4.0"
-thiserror = "1.0.21"
+thiserror = "1.0.22"
 tiny-sha256 = { git = "https://github.com/fspmarshall/tiny-sha256", rev = "7902359bf8f23d4cd039d0ca066d144dcd78505d" }
 
 [dev-dependencies]
