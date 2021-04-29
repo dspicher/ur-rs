@@ -16,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Version
+      run: cargo --version
     - name: Format
       run: cargo fmt -- --check
     - name: Install cargo-sort-ck
