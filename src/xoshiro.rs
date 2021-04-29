@@ -61,7 +61,7 @@ impl Xoshiro256 {
         shuffled
     }
 
-    pub fn choose_degree(&mut self, length: usize) -> Result<u32, &'static str> {
+    pub fn choose_degree(&mut self, length: usize) -> anyhow::Result<u32> {
         #[allow(clippy::cast_precision_loss)]
         let degree_weights: Vec<f64> = (1..=length).map(|x| 1.0 / x as f64).collect();
         let mut sampler = crate::sampler::Weighted::new(degree_weights)?;

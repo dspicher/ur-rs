@@ -7,13 +7,15 @@ pub struct Weighted {
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_precision_loss)]
 impl Weighted {
-    pub fn new(mut weights: Vec<f64>) -> Result<Self, &'static str> {
+    pub fn new(mut weights: Vec<f64>) -> anyhow::Result<Self> {
         if weights.iter().any(|p| *p < 0.0) {
-            return Err("negative probability encountered");
+            return Err(anyhow::anyhow!("negative probability encountered"));
         }
         let summed = weights.iter().sum::<f64>();
         if summed <= 0.0 {
-            return Err("probabilities don't sum to a positive value");
+            return Err(anyhow::anyhow!(
+                "probabilities don't sum to a positive value"
+            ));
         }
         let count = weights.len();
         for w in &mut weights {

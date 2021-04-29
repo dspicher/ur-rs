@@ -25,10 +25,10 @@ impl Encoder {
         }
     }
 
-    pub fn next_part(&mut self) -> String {
-        let part = self.fountain.next_part();
-        let body = crate::bytewords::encode(&part.cbor(), &crate::bytewords::Style::Minimal);
-        Self::encode_ur(&["bytes".into(), part.sequence_id(), body])
+    pub fn next_part(&mut self) -> anyhow::Result<String> {
+        let part = self.fountain.next_part()?;
+        let body = crate::bytewords::encode(&part.cbor()?, &crate::bytewords::Style::Minimal);
+        Ok(Self::encode_ur(&["bytes".into(), part.sequence_id(), body]))
     }
 }
 
@@ -57,7 +57,7 @@ impl Decoder {
     pub fn receive(&mut self, value: &str) -> anyhow::Result<()> {
         let decoded = Self::decode(value)?;
         self.fountain
-            .receive(crate::fountain::Part::from_cbor(decoded)?);
+            .receive(crate::fountain::Part::from_cbor(decoded)?)?;
         Ok(())
     }
 
@@ -121,7 +121,7 @@ mod tests {
             "ur:bytes/20-9/lpbbascfadaxcywenbpljkhdcayapmrleeleaxpasfrtrdkncffwjyjzgyetdmlewtkpktgllepfrltataztksmhkbot",
         ];
         for e in expected {
-            assert_eq!(encoder.next_part(), e);
+            assert_eq!(encoder.next_part().unwrap(), e);
         }
     }
 
@@ -131,7 +131,7 @@ mod tests {
         let mut encoder = Encoder::new(&ur, 1000);
         let mut decoder = Decoder::default();
         while !decoder.complete() {
-            let part = encoder.next_part();
+            let part = encoder.next_part().unwrap();
             decoder.receive(&part).unwrap();
         }
         assert_eq!(decoder.message().unwrap(), ur);
