@@ -578,7 +578,7 @@ mod tests {
         let mut decoder = Decoder::default();
         while !decoder.complete() {
             let part = encoder.next_part().unwrap();
-            let _ = decoder.receive(part);
+            let _next = decoder.receive(part);
         }
         assert_eq!(decoder.message().unwrap(), message);
     }
@@ -596,7 +596,7 @@ mod tests {
         while !decoder.complete() {
             let part = encoder.next_part().unwrap();
             if !skip {
-                let _ = decoder.receive(part);
+                let _next = decoder.receive(part);
             }
             skip = !skip;
         }
