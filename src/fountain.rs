@@ -18,20 +18,20 @@ impl Encoder {
         }
     }
 
-    pub fn next_part(&mut self) -> Part {
+    pub fn next_part(&mut self) -> anyhow::Result<Part> {
         self.current_sequence += 1;
-        let indexes = choose_fragments(self.current_sequence, self.parts.len(), self.checksum);
+        let indexes = choose_fragments(self.current_sequence, self.parts.len(), self.checksum)?;
         let mut mixed = vec![0; self.parts[0].len()];
         for i in indexes {
             mixed = xor(&mixed, &self.parts[i]);
         }
-        Part {
+        Ok(Part {
             sequence: self.current_sequence,
             sequence_count: self.parts.len(),
             message_length: self.message_length,
             checksum: self.checksum,
             data: mixed,
-        }
+        })
     }
 
     #[must_use]
@@ -67,37 +67,40 @@ impl std::default::Default for Decoder {
 }
 
 impl Decoder {
-    pub fn receive(&mut self, part: Part) -> bool {
+    pub fn receive(&mut self, part: Part) -> anyhow::Result<bool> {
         if self.complete() {
-            return false;
+            return Ok(false);
         }
         if !self.validate(&part) {
-            return false;
+            return Ok(false);
         }
-        let indexes = part.indexes();
+        let indexes = part.indexes()?;
         if self.received.contains(&indexes) {
-            return false;
+            return Ok(false);
         }
         self.received.insert(indexes);
-        if part.is_simple() {
-            self.process_simple(part);
+        if part.is_simple()? {
+            self.process_simple(part)?;
         } else {
-            self.process_complex(part);
+            self.process_complex(part)?;
         }
-        true
+        Ok(true)
     }
 
-    pub fn process_simple(&mut self, part: Part) {
-        assert_eq!(part.indexes().len(), 1);
-        let index = part.indexes()[0];
+    pub fn process_simple(&mut self, part: Part) -> anyhow::Result<()> {
+        let index = part.indexes()?[0];
         self.decoded.insert(index, part.clone());
         self.queue.push_back((index, part));
-        self.process_queue();
+        self.process_queue()?;
+        Ok(())
     }
 
-    pub fn process_queue(&mut self) {
+    pub fn process_queue(&mut self) -> anyhow::Result<()> {
         while !self.queue.is_empty() {
-            let (index, simple) = self.queue.pop_front().unwrap();
+            let (index, simple) = self
+                .queue
+                .pop_front()
+                .ok_or_else(|| anyhow::anyhow!("expected item"))?;
             let mut to_process = vec![];
             for indexes in self.buffer.keys() {
                 if indexes.iter().any(|idx| idx == &index) {
@@ -105,9 +108,15 @@ impl Decoder {
                 }
             }
             for indexes in to_process {
-                let mut part = self.buffer.remove(&indexes).unwrap();
+                let mut part = self
+                    .buffer
+                    .remove(&indexes)
+                    .ok_or_else(|| anyhow::anyhow!("expected item"))?;
                 let mut new_indexes = indexes.clone();
-                let to_remove = indexes.iter().position(|x| *x == index).unwrap();
+                let to_remove = indexes
+                    .iter()
+                    .position(|x| *x == index)
+                    .ok_or_else(|| anyhow::anyhow!("expected item"))?;
                 new_indexes.remove(to_remove);
                 part.data = xor(&part.data, &simple.data);
                 if new_indexes.len() == 1 {
@@ -118,10 +127,11 @@ impl Decoder {
                 }
             }
         }
+        Ok(())
     }
 
-    pub fn process_complex(&mut self, mut part: Part) {
-        let mut indexes = part.indexes();
+    pub fn process_complex(&mut self, mut part: Part) -> anyhow::Result<()> {
+        let mut indexes = part.indexes()?;
         let mut to_remove = vec![];
         for index in indexes.clone() {
             if self.decoded.keys().any(|k| *k == index) {
@@ -129,12 +139,22 @@ impl Decoder {
             }
         }
         if indexes.len() == to_remove.len() {
-            return;
+            return Ok(());
         }
         for remove in to_remove {
-            let idx_to_remove = indexes.iter().position(|x| *x == remove).unwrap();
+            let idx_to_remove = indexes
+                .iter()
+                .position(|x| *x == remove)
+                .ok_or_else(|| anyhow::anyhow!("expected item"))?;
             indexes.remove(idx_to_remove);
-            part.data = xor(&part.data, &self.decoded.get(&remove).unwrap().data);
+            part.data = xor(
+                &part.data,
+                &self
+                    .decoded
+                    .get(&remove)
+                    .ok_or_else(|| anyhow::anyhow!("expected item"))?
+                    .data,
+            );
         }
         if indexes.len() == 1 {
             self.decoded.insert(indexes[0], part.clone());
@@ -142,6 +162,7 @@ impl Decoder {
         } else {
             self.buffer.insert(indexes, part);
         }
+        Ok(())
     }
 
     #[must_use]
@@ -177,7 +198,14 @@ impl Decoder {
             return Err(anyhow::anyhow!("not yet complete"));
         }
         let combined = (0..self.sequence_count)
-            .map(|idx| self.decoded.get(&idx).unwrap().data.clone())
+            .map(|idx| {
+                self.decoded
+                    .get(&idx)
+                    .ok_or_else(|| anyhow::anyhow!("expected item"))
+            })
+            .collect::<Result<Vec<&Part>, anyhow::Error>>()?
+            .iter()
+            .map(|p| p.data.clone())
             .fold(vec![], |a, b| [a, b].concat());
         if !combined[self.message_length..]
             .to_vec()
@@ -223,14 +251,20 @@ impl Part {
         if items.len() != 1 {
             return Err(anyhow::anyhow!("invalid cbor length for Part"));
         }
-        let items = match items.get(0).unwrap() {
+        let items = match items
+            .get(0)
+            .ok_or_else(|| anyhow::anyhow!("expected item"))?
+        {
             cbor::Cbor::Array(a) => a,
             _ => return Err(anyhow::anyhow!("invalid top-level item")),
         };
         if items.len() != 5 {
             return Err(anyhow::anyhow!("invalid cbor array length"));
         }
-        let sequence: usize = match items.get(0).unwrap() {
+        let sequence: usize = match items
+            .get(0)
+            .ok_or_else(|| anyhow::anyhow!("expected item"))?
+        {
             cbor::Cbor::Unsigned(t) => match t {
                 cbor::CborUnsigned::UInt8(u) => *u as usize,
                 cbor::CborUnsigned::UInt16(u) => *u as usize,
@@ -239,7 +273,10 @@ impl Part {
             },
             _ => return Err(anyhow::anyhow!("unexpected item at position 0")),
         };
-        let sequence_count: usize = match items.get(1).unwrap() {
+        let sequence_count: usize = match items
+            .get(1)
+            .ok_or_else(|| anyhow::anyhow!("expected item"))?
+        {
             cbor::Cbor::Unsigned(t) => match t {
                 cbor::CborUnsigned::UInt8(u) => *u as usize,
                 cbor::CborUnsigned::UInt16(u) => *u as usize,
@@ -248,7 +285,10 @@ impl Part {
             },
             _ => return Err(anyhow::anyhow!("unexpected item at position 1")),
         };
-        let message_length: usize = match items.get(2).unwrap() {
+        let message_length: usize = match items
+            .get(2)
+            .ok_or_else(|| anyhow::anyhow!("expected item"))?
+        {
             cbor::Cbor::Unsigned(t) => match t {
                 cbor::CborUnsigned::UInt8(u) => *u as usize,
                 cbor::CborUnsigned::UInt16(u) => *u as usize,
@@ -257,7 +297,10 @@ impl Part {
             },
             _ => return Err(anyhow::anyhow!("unexpected item at position 2")),
         };
-        let checksum: u32 = match items.get(3).unwrap() {
+        let checksum: u32 = match items
+            .get(3)
+            .ok_or_else(|| anyhow::anyhow!("expected item"))?
+        {
             cbor::Cbor::Unsigned(t) => match t {
                 cbor::CborUnsigned::UInt8(u) => u32::from(*u),
                 cbor::CborUnsigned::UInt16(u) => u32::from(*u),
@@ -266,7 +309,10 @@ impl Part {
             },
             _ => return Err(anyhow::anyhow!("unexpected item at position 3")),
         };
-        let data: Vec<u8> = match &items.get(4).unwrap() {
+        let data: Vec<u8> = match &items
+            .get(4)
+            .ok_or_else(|| anyhow::anyhow!("expected item"))?
+        {
             cbor::Cbor::Bytes(b) => b.to_vec(),
             _ => return Err(anyhow::anyhow!("unexpected item at position 4")),
         };
@@ -279,19 +325,16 @@ impl Part {
         })
     }
 
-    #[must_use]
-    pub fn indexes(&self) -> Vec<usize> {
+    pub fn indexes(&self) -> anyhow::Result<Vec<usize>> {
         choose_fragments(self.sequence, self.sequence_count, self.checksum)
     }
 
-    #[must_use]
-    pub fn is_simple(&self) -> bool {
-        self.indexes().len() == 1
+    pub fn is_simple(&self) -> anyhow::Result<bool> {
+        Ok(self.indexes()?.len() == 1)
     }
 
-    #[must_use]
     #[allow(clippy::cast_possible_truncation)]
-    pub fn cbor(&self) -> Vec<u8> {
+    pub fn cbor(&self) -> anyhow::Result<Vec<u8>> {
         let mut e = cbor::Encoder::from_memory();
         e.encode(vec![cbor::Cbor::Array(vec![
             cbor::Cbor::Unsigned(cbor::CborUnsigned::UInt32(self.sequence as u32)),
@@ -299,9 +342,8 @@ impl Part {
             cbor::Cbor::Unsigned(cbor::CborUnsigned::UInt32(self.message_length as u32)),
             cbor::Cbor::Unsigned(cbor::CborUnsigned::UInt32(self.checksum)),
             cbor::Cbor::Bytes(cbor::CborBytes(self.data.clone())),
-        ])])
-        .unwrap();
-        e.as_bytes().to_vec()
+        ])])?;
+        Ok(e.as_bytes().to_vec())
     }
 
     #[must_use]
@@ -335,20 +377,23 @@ pub fn join(data: Vec<Vec<u8>>, message_length: usize) -> Result<Vec<u8>, &'stat
     Ok(flattened)
 }
 
-#[must_use]
-pub fn choose_fragments(sequence: usize, fragment_count: usize, checksum: u32) -> Vec<usize> {
+pub fn choose_fragments(
+    sequence: usize,
+    fragment_count: usize,
+    checksum: u32,
+) -> anyhow::Result<Vec<usize>> {
     if sequence <= fragment_count {
-        return vec![sequence - 1];
+        return Ok(vec![sequence - 1]);
     }
     #[allow(clippy::cast_possible_truncation)]
     let mut seed: Vec<u8> = (sequence as u32).to_be_bytes().to_vec();
     seed.extend((checksum as u32).to_be_bytes().to_vec());
     let mut xoshiro = crate::xoshiro::Xoshiro256::from(seed.as_slice());
-    let degree = xoshiro.choose_degree(fragment_count).unwrap();
+    let degree = xoshiro.choose_degree(fragment_count)?;
     let indexes = (0..fragment_count).collect();
     let mut shuffled = xoshiro.shuffled(indexes);
     shuffled.truncate(degree as usize);
-    shuffled
+    Ok(shuffled)
 }
 
 #[must_use]
@@ -431,7 +476,8 @@ mod tests {
             vec![7],
         ];
         for seq_num in 1..=30 {
-            let mut indexes = crate::fountain::choose_fragments(seq_num, fragments.len(), checksum);
+            let mut indexes =
+                crate::fountain::choose_fragments(seq_num, fragments.len(), checksum).unwrap();
             indexes.sort_unstable();
             assert_eq!(indexes, expected_fragment_indexes[seq_num - 1]);
         }
@@ -476,7 +522,7 @@ mod tests {
             "seqNum:20, seqLen:9, messageLen:256, checksum:23570951, data:e055c2433562184fa71b4be94f262e200f01c6f74c284b0dc6fae6673f"
         ];
         for e in expected_parts {
-            assert_eq!(encoder.next_part().to_string(), e);
+            assert_eq!(encoder.next_part().unwrap().to_string(), e);
         }
     }
 
@@ -507,7 +553,7 @@ mod tests {
             "8514091901001a0167aa07581de055c2433562184fa71b4be94f262e200f01c6f74c284b0dc6fae6673f",
         ];
         for e in expected_parts {
-            assert_eq!(hex::encode(encoder.next_part().cbor()), e);
+            assert_eq!(hex::encode(encoder.next_part().unwrap().cbor().unwrap()), e);
         }
     }
 
@@ -516,7 +562,7 @@ mod tests {
         let message = crate::xoshiro::test_utils::make_message("Wolf", 256);
         let mut encoder = Encoder::new(&message, 30);
         for _ in 0..encoder.parts.len() {
-            encoder.next_part();
+            encoder.next_part().unwrap();
         }
         assert!(encoder.complete());
     }
@@ -531,7 +577,7 @@ mod tests {
         let mut encoder = Encoder::new(&message, max_fragment_length);
         let mut decoder = Decoder::default();
         while !decoder.complete() {
-            let part = encoder.next_part();
+            let part = encoder.next_part().unwrap();
             let _ = decoder.receive(part);
         }
         assert_eq!(decoder.message().unwrap(), message);
@@ -548,7 +594,7 @@ mod tests {
         let mut decoder = Decoder::default();
         let mut skip = false;
         while !decoder.complete() {
-            let part = encoder.next_part();
+            let part = encoder.next_part().unwrap();
             if !skip {
                 let _ = decoder.receive(part);
             }
@@ -566,21 +612,21 @@ mod tests {
         let message = crate::xoshiro::test_utils::make_message(seed, message_size);
         let mut encoder = Encoder::new(&message, max_fragment_length);
         let mut decoder = Decoder::default();
-        let part = encoder.next_part();
-        assert!(decoder.receive(part.clone()));
+        let part = encoder.next_part().unwrap();
+        assert!(decoder.receive(part.clone()).unwrap());
         // same indexes
-        assert!(!decoder.receive(part));
+        assert!(!decoder.receive(part).unwrap());
         // non-valid
-        let mut part = encoder.next_part();
+        let mut part = encoder.next_part().unwrap();
         part.checksum += 1;
-        assert!(!decoder.receive(part));
+        assert!(!decoder.receive(part).unwrap());
         // decoder complete
         while !decoder.complete() {
-            let part = encoder.next_part();
-            decoder.receive(part);
+            let part = encoder.next_part().unwrap();
+            decoder.receive(part).unwrap();
         }
-        let part = encoder.next_part();
-        assert!(!decoder.receive(part));
+        let part = encoder.next_part().unwrap();
+        assert!(!decoder.receive(part).unwrap());
     }
 
     #[test]
@@ -592,9 +638,9 @@ mod tests {
             checksum: 0x1234_5678,
             data: vec![1, 5, 3, 3, 5],
         };
-        let cbor = part.cbor();
+        let cbor = part.cbor().unwrap();
         let part2 = Part::from_cbor(cbor.clone()).unwrap();
-        let cbor2 = part2.cbor();
+        let cbor2 = part2.cbor().unwrap();
         assert_eq!(cbor, cbor2);
     }
 
