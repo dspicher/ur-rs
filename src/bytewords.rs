@@ -60,24 +60,33 @@ fn strip_checksum(data: &[u8]) -> Result<Vec<u8>, Error> {
     }
 }
 
-#[must_use]
-pub fn encode(data: &[u8], style: &Style) -> String {
+pub fn encode(data: &[u8], style: &Style) -> anyhow::Result<String> {
     let checksum = crc::crc32::checksum_ieee(data).to_be_bytes();
     let data = data.iter().chain(checksum.iter());
     let words: Vec<&str> = match style {
         Style::Standard | Style::Uri => data
-            .map(|b| *crate::constants::WORDS.get(*b as usize).unwrap())
-            .collect(),
+            .map(|b| {
+                crate::constants::WORDS
+                    .get(*b as usize)
+                    .cloned()
+                    .ok_or_else(|| anyhow::anyhow!("expected item"))
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?,
         Style::Minimal => data
-            .map(|b| *crate::constants::MINIMALS.get(*b as usize).unwrap())
-            .collect(),
+            .map(|b| {
+                crate::constants::MINIMALS
+                    .get(*b as usize)
+                    .cloned()
+                    .ok_or_else(|| anyhow::anyhow!("expected item"))
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?,
     };
     let separator = match style {
         Style::Standard => " ",
         Style::Uri => "-",
         Style::Minimal => "",
     };
-    words.join(separator)
+    Ok(words.join(separator))
 }
 
 #[cfg(test)]
@@ -94,14 +103,17 @@ mod tests {
     fn test_bytewords() {
         let input = vec![0, 1, 2, 128, 255];
         assert_eq!(
-            encode(&input, &Style::Standard),
+            encode(&input, &Style::Standard).unwrap(),
             "able acid also lava zoom jade need echo taxi"
         );
         assert_eq!(
-            encode(&input, &Style::Uri),
+            encode(&input, &Style::Uri).unwrap(),
             "able-acid-also-lava-zoom-jade-need-echo-taxi"
         );
-        assert_eq!(encode(&input, &Style::Minimal), "aeadaolazmjendeoti");
+        assert_eq!(
+            encode(&input, &Style::Minimal).unwrap(),
+            "aeadaolazmjendeoti"
+        );
 
         assert_eq!(
             decode(
@@ -184,7 +196,7 @@ mod tests {
             decode(encoded_minimal, &Style::Minimal).unwrap(),
             input.to_vec()
         );
-        assert_eq!(encode(&input, &Style::Standard), encoded);
-        assert_eq!(encode(&input, &Style::Minimal), encoded_minimal);
+        assert_eq!(encode(&input, &Style::Standard).unwrap(), encoded);
+        assert_eq!(encode(&input, &Style::Minimal).unwrap(), encoded_minimal);
     }
 }
