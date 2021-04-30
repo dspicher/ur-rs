@@ -16,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: env
+      run: env
     - name: Version
       run: cargo --version
     - name: Format
