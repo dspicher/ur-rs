@@ -32,7 +32,7 @@ pub fn decode(encoded: &str, style: &Style) -> Result<Vec<u8>, Error> {
 fn decode_minimal(encoded: &str) -> Result<Vec<u8>, Error> {
     let mut data = vec![];
     for idx in (0..encoded.len()).step_by(2) {
-        let substr = &encoded[idx..idx + 2];
+        let substr = encoded.get(idx..idx + 2).unwrap();
         match crate::constants::MINIMAL_IDXS.get(substr) {
             Some(idx) => data.push(*idx),
             None => return Err(Error::InvalidWord),
@@ -65,11 +65,11 @@ pub fn encode(data: &[u8], style: &Style) -> String {
     let checksum = crc::crc32::checksum_ieee(data).to_be_bytes();
     let data = data.iter().chain(checksum.iter());
     let words: Vec<&str> = match style {
-        Style::Standard | Style::Uri => {
-            data.map(|b| crate::constants::WORDS[*b as usize]).collect()
-        }
+        Style::Standard | Style::Uri => data
+            .map(|b| *crate::constants::WORDS.get(*b as usize).unwrap())
+            .collect(),
         Style::Minimal => data
-            .map(|b| crate::constants::MINIMALS[*b as usize])
+            .map(|b| *crate::constants::MINIMALS.get(*b as usize).unwrap())
             .collect(),
     };
     let separator = match style {
