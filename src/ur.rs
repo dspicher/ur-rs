@@ -44,7 +44,9 @@ impl Decoder {
                 Some(v) => Ok(crate::bytewords::decode(
                     match v.find('/') {
                         None => v,
-                        Some(idx) => &v[idx + 1..],
+                        Some(idx) => &v
+                            .get(idx + 1..)
+                            .ok_or_else(|| anyhow::anyhow!("expected items"))?,
                     },
                     &crate::bytewords::Style::Minimal,
                 )?),

@@ -21,9 +21,20 @@ impl Encoder {
     pub fn next_part(&mut self) -> anyhow::Result<Part> {
         self.current_sequence += 1;
         let indexes = choose_fragments(self.current_sequence, self.parts.len(), self.checksum)?;
-        let mut mixed = vec![0; self.parts[0].len()];
+        let mut mixed = vec![
+            0;
+            self.parts
+                .get(0)
+                .ok_or_else(|| anyhow::anyhow!("expected item"))?
+                .len()
+        ];
         for i in indexes {
-            mixed = xor(&mixed, &self.parts[i]);
+            mixed = xor(
+                &mixed,
+                self.parts
+                    .get(i)
+                    .ok_or_else(|| anyhow::anyhow!("expected item"))?,
+            );
         }
         Ok(Part {
             sequence: self.current_sequence,
@@ -88,7 +99,10 @@ impl Decoder {
     }
 
     pub fn process_simple(&mut self, part: Part) -> anyhow::Result<()> {
-        let index = part.indexes()?[0];
+        let index = *part
+            .indexes()?
+            .get(0)
+            .ok_or_else(|| anyhow::anyhow!("expected item"))?;
         self.decoded.insert(index, part.clone());
         self.queue.push_back((index, part));
         self.process_queue()?;
@@ -120,8 +134,18 @@ impl Decoder {
                 new_indexes.remove(to_remove);
                 part.data = xor(&part.data, &simple.data);
                 if new_indexes.len() == 1 {
-                    self.decoded.insert(new_indexes[0], part.clone());
-                    self.queue.push_back((new_indexes[0], part));
+                    self.decoded.insert(
+                        *new_indexes
+                            .get(0)
+                            .ok_or_else(|| anyhow::anyhow!("expected item"))?,
+                        part.clone(),
+                    );
+                    self.queue.push_back((
+                        *new_indexes
+                            .get(0)
+                            .ok_or_else(|| anyhow::anyhow!("expected item"))?,
+                        part,
+                    ));
                 } else {
                     self.buffer.insert(new_indexes, part);
                 }
@@ -157,8 +181,18 @@ impl Decoder {
             );
         }
         if indexes.len() == 1 {
-            self.decoded.insert(indexes[0], part.clone());
-            self.queue.push_back((indexes[0], part));
+            self.decoded.insert(
+                *indexes
+                    .get(0)
+                    .ok_or_else(|| anyhow::anyhow!("expected item"))?,
+                part.clone(),
+            );
+            self.queue.push_back((
+                *indexes
+                    .get(0)
+                    .ok_or_else(|| anyhow::anyhow!("expected item"))?,
+                part,
+            ));
         } else {
             self.buffer.insert(indexes, part);
         }
@@ -207,14 +241,19 @@ impl Decoder {
             .iter()
             .map(|p| p.data.clone())
             .fold(vec![], |a, b| [a, b].concat());
-        if !combined[self.message_length..]
+        if !combined
+            .get(self.message_length..)
+            .ok_or_else(|| anyhow::anyhow!("expected item"))?
             .to_vec()
             .iter()
             .all(|x| *x == 0)
         {
             return Err(anyhow::anyhow!("invalid padding detected"));
         }
-        Ok(combined[..self.message_length].to_vec())
+        Ok(combined
+            .get(..self.message_length)
+            .ok_or_else(|| anyhow::anyhow!("expected item"))?
+            .to_vec())
     }
 }
 
@@ -431,7 +470,10 @@ mod tests {
         ];
         assert_eq!(fragments.len(), expected_fragments.len());
         for i in 0..fragments.len() {
-            assert_eq!(hex::encode(&fragments[i]), expected_fragments[i]);
+            assert_eq!(
+                hex::encode(fragments.get(i).unwrap()),
+                *expected_fragments.get(i).unwrap()
+            );
         }
         let rejoined = join(fragments, message.len()).unwrap();
         assert_eq!(rejoined, message);
@@ -479,7 +521,10 @@ mod tests {
             let mut indexes =
                 crate::fountain::choose_fragments(seq_num, fragments.len(), checksum).unwrap();
             indexes.sort_unstable();
-            assert_eq!(indexes, expected_fragment_indexes[seq_num - 1]);
+            assert_eq!(
+                indexes,
+                *expected_fragment_indexes.get(seq_num - 1).unwrap()
+            );
         }
     }
 

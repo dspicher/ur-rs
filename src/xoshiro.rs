@@ -84,11 +84,11 @@ impl From<[u8; 32]> for Xoshiro256 {
             let mut v: u64 = 0;
             for n in 0..8 {
                 v <<= 8;
-                v |= u64::from(value[8 * i + n]);
+                v |= u64::from(*value.get(8 * i + n).unwrap());
             }
             let bytes = v.to_le_bytes();
             for n in 0..8 {
-                s[8 * i + n] = bytes[n];
+                *s.get_mut(8 * i + n).unwrap() = *bytes.get(n).unwrap();
             }
         }
         Xoshiro256StarStar::from_seed(s).into()
