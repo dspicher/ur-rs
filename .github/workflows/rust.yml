@@ -25,7 +25,7 @@ jobs:
     - name: Check sorted dependencies
       run: cargo sort-ck
     - name: Clippy
-      run: cargo clippy --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -A clippy::missing-errors-doc
+      run: cargo clippy --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -D clippy::dbg-macro -D clippy::indexing-slicing -A clippy::missing-errors-doc -A clippy::missing-panics-doc
     - name: Build
       run: cargo build
     - name: Run tests
