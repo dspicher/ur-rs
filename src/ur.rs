@@ -3,10 +3,9 @@ pub struct Encoder {
 }
 
 impl Encoder {
-    #[must_use]
-    pub fn encode(ur: &[u8]) -> String {
-        let body = crate::bytewords::encode(ur, &crate::bytewords::Style::Minimal);
-        Self::encode_ur(&["bytes".into(), body])
+    pub fn encode(ur: &[u8]) -> anyhow::Result<String> {
+        let body = crate::bytewords::encode(ur, &crate::bytewords::Style::Minimal)?;
+        Ok(Self::encode_ur(&["bytes".into(), body]))
     }
 
     #[must_use]
@@ -27,7 +26,7 @@ impl Encoder {
 
     pub fn next_part(&mut self) -> anyhow::Result<String> {
         let part = self.fountain.next_part()?;
-        let body = crate::bytewords::encode(&part.cbor()?, &crate::bytewords::Style::Minimal);
+        let body = crate::bytewords::encode(&part.cbor()?, &crate::bytewords::Style::Minimal)?;
         Ok(Self::encode_ur(&["bytes".into(), part.sequence_id(), body]))
     }
 }
@@ -89,7 +88,7 @@ mod tests {
     #[test]
     fn test_single_part_ur() {
         let ur = make_message_ur(50, "Wolf");
-        let encoded = Encoder::encode(&ur);
+        let encoded = Encoder::encode(&ur).unwrap();
         let expected = "ur:bytes/hdeymejtswhhylkepmykhhtsytsnoyoyaxaedsuttydmmhhpktpmsrjtgwdpfnsboxgwlbaawzuefywkdplrsrjynbvygabwjldapfcsdwkbrkch";
         assert_eq!(encoded, expected);
         let decoded = Decoder::decode(&encoded).unwrap();

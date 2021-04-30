@@ -25,7 +25,11 @@ impl Weighted {
         let mut l: Vec<usize> = Vec::with_capacity(count);
         for j in 1..=count {
             let i = count - j;
-            if *weights.get(i).unwrap() < 1.0 {
+            if *weights
+                .get(i)
+                .ok_or_else(|| anyhow::anyhow!("expected item"))?
+                < 1.0
+            {
                 s.push(i);
             } else {
                 l.push(i);
@@ -38,10 +42,25 @@ impl Weighted {
         while !s.is_empty() && !l.is_empty() {
             let a = s.remove(s.len() - 1);
             let g = l.remove(l.len() - 1);
-            *probs.get_mut(a).unwrap() = *weights.get(a).unwrap();
-            *aliases.get_mut(a).unwrap() = g as u32;
-            *weights.get_mut(g).unwrap() += *weights.get(a).unwrap() - 1.0;
-            if *weights.get(g).unwrap() < 1.0 {
+            *probs
+                .get_mut(a)
+                .ok_or_else(|| anyhow::anyhow!("expected item"))? = *weights
+                .get(a)
+                .ok_or_else(|| anyhow::anyhow!("expected item"))?;
+            *aliases
+                .get_mut(a)
+                .ok_or_else(|| anyhow::anyhow!("expected item"))? = g as u32;
+            *weights
+                .get_mut(g)
+                .ok_or_else(|| anyhow::anyhow!("expected item"))? += *weights
+                .get(a)
+                .ok_or_else(|| anyhow::anyhow!("expected item"))?
+                - 1.0;
+            if *weights
+                .get(g)
+                .ok_or_else(|| anyhow::anyhow!("expected item"))?
+                < 1.0
+            {
                 s.push(g);
             } else {
                 l.push(g);
@@ -50,12 +69,16 @@ impl Weighted {
 
         while !l.is_empty() {
             let g = l.remove(l.len() - 1);
-            *probs.get_mut(g).unwrap() = 1.0;
+            *probs
+                .get_mut(g)
+                .ok_or_else(|| anyhow::anyhow!("expected item"))? = 1.0;
         }
 
         while !s.is_empty() {
             let a = s.remove(s.len() - 1);
-            *probs.get_mut(a).unwrap() = 1.0;
+            *probs
+                .get_mut(a)
+                .ok_or_else(|| anyhow::anyhow!("expected item"))? = 1.0;
         }
 
         Ok(Self { aliases, probs })
@@ -63,15 +86,23 @@ impl Weighted {
 
     #[allow(clippy::should_implement_trait)]
     #[allow(clippy::cast_sign_loss)]
-    pub fn next(&mut self, xoshiro: &mut crate::xoshiro::Xoshiro256) -> u32 {
+    pub fn next(&mut self, xoshiro: &mut crate::xoshiro::Xoshiro256) -> anyhow::Result<u32> {
         let r1 = xoshiro.next_double();
         let r2 = xoshiro.next_double();
         let n = self.probs.len();
         let i = (n as f64 * r1) as usize;
-        if r2 < *self.probs.get(i).unwrap() {
-            i as u32
+        if r2
+            < *self
+                .probs
+                .get(i)
+                .ok_or_else(|| anyhow::anyhow!("expected item"))?
+        {
+            Ok(i as u32)
         } else {
-            *self.aliases.get(i).unwrap()
+            Ok(*self
+                .aliases
+                .get(i)
+                .ok_or_else(|| anyhow::anyhow!("expected item"))?)
         }
     }
 }
@@ -107,7 +138,7 @@ mod tests {
             3, 3, 3, 0, 3, 3, 2,
         ];
         for e in expected_samples {
-            assert_eq!(sampler.next(&mut xoshiro), e);
+            assert_eq!(sampler.next(&mut xoshiro).unwrap(), e);
         }
     }
 
