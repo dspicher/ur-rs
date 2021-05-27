@@ -230,26 +230,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "thiserror"
-version = "1.0.25"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa6f76457f59514c7eeb4e59d891395fab0b2fd1d40723ae737d64153392e9c6"
-dependencies = [
- "thiserror-impl",
-]
-
-[[package]]
-name = "thiserror-impl"
-version = "1.0.25"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a36768c0fbf1bb15eca10defa29526bda730a2376c2ab4393ccfa16fb1a318d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "tiny-sha256"
 version = "0.1.0"
 source = "git+https://github.com/fspmarshall/tiny-sha256?rev=7902359bf8f23d4cd039d0ca066d144dcd78505d#7902359bf8f23d4cd039d0ca066d144dcd78505d"
@@ -270,7 +250,6 @@ dependencies = [
  "hex",
  "phf",
  "rand_xoshiro",
- "thiserror",
  "tiny-sha256",
 ]
 

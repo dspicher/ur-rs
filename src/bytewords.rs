@@ -5,13 +5,26 @@ pub enum Style {
     Minimal,
 }
 
-#[derive(thiserror::Error, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
-    #[error("invalid word")]
     InvalidWord,
-    #[error("invalid checksum")]
     InvalidChecksum,
 }
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Error::InvalidWord => "invalid word",
+                Error::InvalidChecksum => "invalid checksum",
+            }
+        )
+    }
+}
+
+impl std::error::Error for Error {}
 
 pub fn decode(encoded: &str, style: &Style) -> Result<Vec<u8>, Error> {
     let separator = match style {
