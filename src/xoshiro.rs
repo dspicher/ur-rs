@@ -48,7 +48,7 @@ impl Xoshiro256 {
 
     #[must_use]
     pub fn from_crc(bytes: &[u8]) -> Self {
-        Self::from(&crc::crc32::checksum_ieee(bytes).to_be_bytes()[..])
+        Self::from(&crate::crc32().checksum(bytes).to_be_bytes()[..])
     }
 
     pub fn shuffled<T>(&mut self, mut items: Vec<T>) -> Vec<T> {

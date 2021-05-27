@@ -13,7 +13,7 @@ impl Encoder {
         Self {
             parts: fragments,
             message_length: message.len(),
-            checksum: crc::crc32::checksum_ieee(&message),
+            checksum: crate::crc32().checksum(&message),
             current_sequence: 0,
         }
     }
@@ -482,7 +482,7 @@ mod tests {
     #[test]
     fn test_choose_fragments() {
         let message = crate::xoshiro::test_utils::make_message("Wolf", 1024);
-        let checksum = crc::crc32::checksum_ieee(&message);
+        let checksum = crate::crc32().checksum(&message);
         let fragment_length = crate::fountain::fragment_length(message.len(), 100);
         let fragments = crate::fountain::partition(message, fragment_length);
         let expected_fragment_indexes = vec![

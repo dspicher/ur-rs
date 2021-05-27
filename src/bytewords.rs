@@ -50,7 +50,7 @@ fn strip_checksum(data: &[u8]) -> Result<Vec<u8>, Error> {
         data.get(data.len() - 4..data.len()),
     ) {
         (Some(payload), Some(checksum)) => {
-            if crc::crc32::checksum_ieee(payload).to_be_bytes() == checksum {
+            if crate::crc32().checksum(payload).to_be_bytes() == checksum {
                 Ok(payload.to_vec())
             } else {
                 Err(Error::InvalidChecksum)
@@ -61,7 +61,7 @@ fn strip_checksum(data: &[u8]) -> Result<Vec<u8>, Error> {
 }
 
 pub fn encode(data: &[u8], style: &Style) -> anyhow::Result<String> {
-    let checksum = crc::crc32::checksum_ieee(data).to_be_bytes();
+    let checksum = crate::crc32().checksum(data).to_be_bytes();
     let data = data.iter().chain(checksum.iter());
     let words: Vec<&str> = match style {
         Style::Standard | Style::Uri => data
@@ -94,9 +94,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_crc32() {
-        assert_eq!(crc::crc32::checksum_ieee(b"Hello, world!"), 0xebe6_c6e6);
-        assert_eq!(crc::crc32::checksum_ieee(b"Wolf"), 0x598c_84dc);
+    fn test_crc() {
+        assert_eq!(crate::crc32().checksum(b"Hello, world!"), 0xebe6_c6e6);
+        assert_eq!(crate::crc32().checksum(b"Wolf"), 0x598c_84dc);
     }
 
     #[test]
