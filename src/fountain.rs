@@ -294,7 +294,9 @@ impl Part {
                 cbor::CborUnsigned::UInt8(u) => *u as usize,
                 cbor::CborUnsigned::UInt16(u) => *u as usize,
                 cbor::CborUnsigned::UInt32(u) => *u as usize,
-                _ => return Err(anyhow::anyhow!("unexpected item at position 0")),
+                cbor::CborUnsigned::UInt64(_) => {
+                    return Err(anyhow::anyhow!("unexpected item at position 0"))
+                }
             },
             _ => return Err(anyhow::anyhow!("unexpected item at position 0")),
         };
@@ -306,7 +308,9 @@ impl Part {
                 cbor::CborUnsigned::UInt8(u) => *u as usize,
                 cbor::CborUnsigned::UInt16(u) => *u as usize,
                 cbor::CborUnsigned::UInt32(u) => *u as usize,
-                _ => return Err(anyhow::anyhow!("unexpected item at position 1")),
+                cbor::CborUnsigned::UInt64(_) => {
+                    return Err(anyhow::anyhow!("unexpected item at position 1"))
+                }
             },
             _ => return Err(anyhow::anyhow!("unexpected item at position 1")),
         };
@@ -318,7 +322,9 @@ impl Part {
                 cbor::CborUnsigned::UInt8(u) => *u as usize,
                 cbor::CborUnsigned::UInt16(u) => *u as usize,
                 cbor::CborUnsigned::UInt32(u) => *u as usize,
-                _ => return Err(anyhow::anyhow!("unexpected item at position 2")),
+                cbor::CborUnsigned::UInt64(_) => {
+                    return Err(anyhow::anyhow!("unexpected item at position 2"))
+                }
             },
             _ => return Err(anyhow::anyhow!("unexpected item at position 2")),
         };
@@ -330,7 +336,9 @@ impl Part {
                 cbor::CborUnsigned::UInt8(u) => u32::from(*u),
                 cbor::CborUnsigned::UInt16(u) => u32::from(*u),
                 cbor::CborUnsigned::UInt32(u) => *u,
-                _ => return Err(anyhow::anyhow!("unexpected item at position 3")),
+                cbor::CborUnsigned::UInt64(_) => {
+                    return Err(anyhow::anyhow!("unexpected item at position 3"))
+                }
             },
             _ => return Err(anyhow::anyhow!("unexpected item at position 3")),
         };

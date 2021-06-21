@@ -81,7 +81,7 @@ pub fn encode(data: &[u8], style: &Style) -> anyhow::Result<String> {
             .map(|b| {
                 crate::constants::WORDS
                     .get(*b as usize)
-                    .cloned()
+                    .copied()
                     .ok_or_else(|| anyhow::anyhow!("expected item"))
             })
             .collect::<anyhow::Result<Vec<_>>>()?,
@@ -89,7 +89,7 @@ pub fn encode(data: &[u8], style: &Style) -> anyhow::Result<String> {
             .map(|b| {
                 crate::constants::MINIMALS
                     .get(*b as usize)
-                    .cloned()
+                    .copied()
                     .ok_or_else(|| anyhow::anyhow!("expected item"))
             })
             .collect::<anyhow::Result<Vec<_>>>()?,
