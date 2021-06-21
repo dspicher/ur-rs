@@ -51,6 +51,7 @@ impl Encoder {
     }
 }
 
+#[derive(Default)]
 pub struct Decoder {
     decoded: std::collections::HashMap<usize, Part>,
     received: std::collections::HashSet<Vec<usize>>,
@@ -60,21 +61,6 @@ pub struct Decoder {
     message_length: usize,
     checksum: u32,
     fragment_length: usize,
-}
-
-impl std::default::Default for Decoder {
-    fn default() -> Self {
-        Self {
-            decoded: std::collections::HashMap::default(),
-            received: std::collections::HashSet::default(),
-            buffer: std::collections::HashMap::default(),
-            queue: std::collections::VecDeque::default(),
-            sequence_count: 0,
-            message_length: 0,
-            checksum: 0,
-            fragment_length: 0,
-        }
-    }
 }
 
 impl Decoder {
