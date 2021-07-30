@@ -58,7 +58,7 @@ impl Decoder {
     pub fn receive(&mut self, value: &str) -> anyhow::Result<()> {
         let decoded = Self::decode(value)?;
         self.fountain
-            .receive(crate::fountain::Part::from_cbor(decoded)?)?;
+            .receive(crate::fountain::Part::from_cbor(decoded.as_slice())?)?;
         Ok(())
     }
 
@@ -75,14 +75,11 @@ impl Decoder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_cbor::Value;
 
     fn make_message_ur(length: usize, seed: &str) -> Vec<u8> {
         let message = crate::xoshiro::test_utils::make_message(seed, length);
-        let mut encoder = cbor::Encoder::from_memory();
-        encoder
-            .encode(vec![cbor::Cbor::Bytes(cbor::CborBytes(message))])
-            .unwrap();
-        encoder.as_bytes().to_vec()
+        serde_cbor::to_vec(&Value::Bytes(message)).unwrap()
     }
 
     #[test]
