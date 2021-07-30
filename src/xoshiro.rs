@@ -1,3 +1,4 @@
+use bitcoin_hashes::Hash;
 use rand_xoshiro::rand_core::RngCore;
 use rand_xoshiro::rand_core::SeedableRng;
 use rand_xoshiro::Xoshiro256StarStar;
@@ -15,9 +16,8 @@ impl From<Xoshiro256StarStar> for Xoshiro256 {
 
 impl From<&[u8]> for Xoshiro256 {
     fn from(from: &[u8]) -> Self {
-        let mut hasher = tiny_sha256::Sha256::new();
-        hasher.absorb(from);
-        Self::from(hasher.finish())
+        let hash = bitcoin_hashes::sha256::Hash::hash(from);
+        Self::from(hash.into_inner())
     }
 }
 
@@ -71,9 +71,8 @@ impl Xoshiro256 {
 
 impl From<&str> for Xoshiro256 {
     fn from(value: &str) -> Self {
-        let mut hasher = tiny_sha256::Sha256::new();
-        hasher.absorb(value.as_bytes());
-        Self::from(hasher.finish())
+        let hash = bitcoin_hashes::sha256::Hash::hash(value.as_bytes());
+        Self::from(hash.into_inner())
     }
 }
 
