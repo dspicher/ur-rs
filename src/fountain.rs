@@ -13,7 +13,7 @@ impl Encoder {
         Self {
             parts: fragments,
             message_length: message.len(),
-            checksum: crate::crc32().checksum(&message),
+            checksum: crate::crc32().checksum(message),
             current_sequence: 0,
         }
     }
