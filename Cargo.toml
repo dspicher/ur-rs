@@ -10,7 +10,7 @@ anyhow = "1.0.42"
 bitcoin_hashes = "0.10.0"
 crc = "2.0.0"
 hex = "0.4.3"
-phf = { version = "0.9.0", features = ["macros"] }
+phf = { version = "0.9.1", features = ["macros"] }
 rand_xoshiro = "0.6.0"
 serde = "1.0.126"
 serde_cbor = "0.11.1"
