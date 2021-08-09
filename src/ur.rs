@@ -10,7 +10,7 @@ impl Encoder {
 
     #[must_use]
     fn encode_ur(items: &[String]) -> String {
-        Self::encode_uri("ur", &items)
+        Self::encode_uri("ur", items)
     }
 
     fn encode_uri(scheme: &str, items: &[String]) -> String {
@@ -43,7 +43,7 @@ impl Decoder {
                 Some(v) => Ok(crate::bytewords::decode(
                     match v.find('/') {
                         None => v,
-                        Some(idx) => &v
+                        Some(idx) => v
                             .get(idx + 1..)
                             .ok_or_else(|| anyhow::anyhow!("expected items"))?,
                     },
