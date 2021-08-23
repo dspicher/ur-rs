@@ -1,5 +1,7 @@
 [package]
-name = "ur-rs"
+name = "ur"
+description = "A Rust implementation of Uniform Resources"
+license = "MIT"
 version = "0.1.0"
 authors = ["Dominik Spicher <dominikspicher@gmail.com>"]
 edition = "2018"

@@ -7,7 +7,7 @@ Rust Uniform Resources
 Until this crate is published on crates.io, include the following in your `Cargo.toml`:
 ```toml
 [dependencies]
-ur-rs = { git = "https://github.com/dspicher/ur-rs", rev = "edc32680f0f9e82705ffb8e812f91b8347d9edca" }
+ur = { git = "https://github.com/dspicher/ur-rs", rev = "edc32680f0f9e82705ffb8e812f91b8347d9edca" }
 ```
 
 ## Uniform Resources
