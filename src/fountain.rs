@@ -255,9 +255,9 @@ pub struct Part {
     data: Vec<u8>,
 }
 
-#[allow(clippy::cast_possible_truncation)]
 impl Serialize for Part {
     fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        #[allow(clippy::cast_possible_truncation)]
         let data = vec![
             Value::from(self.sequence as u32),
             Value::from(self.sequence_count as u32),
@@ -270,8 +270,6 @@ impl Serialize for Part {
     }
 }
 
-#[allow(clippy::cast_possible_truncation)]
-#[allow(clippy::cast_sign_loss)]
 impl<'de> Deserialize<'de> for Part {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         match Value::deserialize(deserializer) {
@@ -294,6 +292,8 @@ impl<'de> Deserialize<'de> for Part {
                                 if *integer > i128::from(u32::MAX) {
                                     return err;
                                 }
+                                #[allow(clippy::cast_possible_truncation)]
+                                #[allow(clippy::cast_sign_loss)]
                                 Ok(*integer as u32)
                             }
                             _ => err,

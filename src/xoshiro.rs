@@ -23,7 +23,6 @@ impl From<&[u8]> for Xoshiro256 {
 
 #[allow(clippy::cast_precision_loss)]
 #[allow(clippy::cast_possible_truncation)]
-#[allow(clippy::cast_sign_loss)]
 impl Xoshiro256 {
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> u64 {
@@ -34,6 +33,7 @@ impl Xoshiro256 {
         self.next() as f64 / (u64::MAX as f64 + 1.0)
     }
 
+    #[allow(clippy::cast_sign_loss)]
     pub fn next_int(&mut self, low: u64, high: u64) -> u64 {
         (self.next_double() * ((high - low + 1) as f64)) as u64 + low
     }
