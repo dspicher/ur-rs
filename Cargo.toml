@@ -17,7 +17,7 @@ rand_xoshiro = "0.6.0"
 serde = "1.0.129"
 serde_cbor = "0.11.2"
 serde_derive = "1.0.129"
-thiserror = "1.0.26"
+thiserror = "1.0.29"
 
 [dev-dependencies]
 
