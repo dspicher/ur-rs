@@ -123,18 +123,9 @@ impl Decoder {
                 new_indexes.remove(to_remove);
                 part.data = xor(&part.data, &simple.data);
                 if new_indexes.len() == 1 {
-                    self.decoded.insert(
-                        *new_indexes
-                            .get(0)
-                            .ok_or_else(|| anyhow::anyhow!("expected item"))?,
-                        part.clone(),
-                    );
-                    self.queue.push_back((
-                        *new_indexes
-                            .get(0)
-                            .ok_or_else(|| anyhow::anyhow!("expected item"))?,
-                        part,
-                    ));
+                    self.decoded
+                        .insert(*new_indexes.get(0).unwrap(), part.clone());
+                    self.queue.push_back((*new_indexes.get(0).unwrap(), part));
                 } else {
                     self.buffer.insert(new_indexes, part);
                 }
@@ -170,18 +161,8 @@ impl Decoder {
             );
         }
         if indexes.len() == 1 {
-            self.decoded.insert(
-                *indexes
-                    .get(0)
-                    .ok_or_else(|| anyhow::anyhow!("expected item"))?,
-                part.clone(),
-            );
-            self.queue.push_back((
-                *indexes
-                    .get(0)
-                    .ok_or_else(|| anyhow::anyhow!("expected item"))?,
-                part,
-            ));
+            self.decoded.insert(*indexes.get(0).unwrap(), part.clone());
+            self.queue.push_back((*indexes.get(0).unwrap(), part));
         } else {
             self.buffer.insert(indexes, part);
         }
@@ -284,10 +265,7 @@ impl<'de> Deserialize<'de> for Part {
                             "unexpected item at position {}",
                             index
                         )));
-                        match array
-                            .get(index)
-                            .ok_or_else(|| serde::de::Error::custom("expected item"))?
-                        {
+                        match array.get(index).unwrap() {
                             Value::Integer(integer) => {
                                 if *integer > i128::from(u32::MAX) {
                                     return err;
@@ -305,11 +283,7 @@ impl<'de> Deserialize<'de> for Part {
                     let message_length = check_cbor_number(&array, 2)?;
                     let checksum = check_cbor_number(&array, 3)?;
 
-                    let data = match array
-                        .get(4)
-                        .ok_or_else(|| serde::de::Error::custom("expected item"))?
-                        .clone()
-                    {
+                    let data = match array.get(4).unwrap().clone() {
                         Value::Bytes(bytes) => bytes,
                         _ => {
                             return Err(serde::de::Error::custom("unexpected item at position 4"));

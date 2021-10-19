@@ -45,18 +45,11 @@ fn strip_checksum(data: &[u8]) -> Result<Vec<u8>, Error> {
     if data.len() < 4 {
         return Err(Error::InvalidChecksum);
     }
-    match (
-        data.get(..data.len() - 4),
-        data.get(data.len() - 4..data.len()),
-    ) {
-        (Some(payload), Some(checksum)) => {
-            if crate::crc32().checksum(payload).to_be_bytes() == checksum {
-                Ok(payload.to_vec())
-            } else {
-                Err(Error::InvalidChecksum)
-            }
-        }
-        _ => Err(Error::InvalidChecksum),
+    let (payload, checksum) = data.split_at(data.len() - 4);
+    if crate::crc32().checksum(payload).to_be_bytes() == checksum {
+        Ok(payload.to_vec())
+    } else {
+        Err(Error::InvalidChecksum)
     }
 }
 
@@ -65,21 +58,16 @@ pub fn encode(data: &[u8], style: &Style) -> anyhow::Result<String> {
     let data = data.iter().chain(checksum.iter());
     let words: Vec<&str> = match style {
         Style::Standard | Style::Uri => data
-            .map(|b| {
-                crate::constants::WORDS
-                    .get(*b as usize)
-                    .copied()
-                    .ok_or_else(|| anyhow::anyhow!("expected item"))
-            })
-            .collect::<anyhow::Result<Vec<_>>>()?,
+            .map(|b| crate::constants::WORDS.get(*b as usize).copied().unwrap())
+            .collect(),
         Style::Minimal => data
             .map(|b| {
                 crate::constants::MINIMALS
                     .get(*b as usize)
                     .copied()
-                    .ok_or_else(|| anyhow::anyhow!("expected item"))
+                    .unwrap()
             })
-            .collect::<anyhow::Result<Vec<_>>>()?,
+            .collect(),
     };
     let separator = match style {
         Style::Standard => " ",
