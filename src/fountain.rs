@@ -349,10 +349,7 @@ impl std::fmt::Display for Part {
 
 impl Part {
     pub fn from_cbor(cbor: &[u8]) -> anyhow::Result<Self> {
-        match serde_cbor::from_slice(cbor) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(anyhow::anyhow!(e)),
-        }
+        serde_cbor::from_slice(cbor).map_err(|e| anyhow::anyhow!(e))
     }
 
     pub fn indexes(&self) -> anyhow::Result<Vec<usize>> {
@@ -364,10 +361,7 @@ impl Part {
     }
 
     pub fn cbor(&self) -> anyhow::Result<Vec<u8>> {
-        match serde_cbor::to_vec(self) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(anyhow::anyhow!(e)),
-        }
+        serde_cbor::to_vec(self).map_err(|e| anyhow::anyhow!(e))
     }
 
     #[must_use]
