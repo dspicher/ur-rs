@@ -120,6 +120,9 @@ mod tests {
             input
         );
 
+        // empty payload is allowed
+        decode(&encode(&[], &Style::Minimal).unwrap(), &Style::Minimal).unwrap();
+
         // bad checksum
         assert_eq!(
             decode(
