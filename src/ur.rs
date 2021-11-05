@@ -17,11 +17,10 @@ impl Encoder {
         format!("{}:{}", scheme, items.join("/"))
     }
 
-    #[must_use]
-    pub fn new(message: &[u8], max_fragment_length: usize) -> Self {
-        Self {
-            fountain: crate::fountain::Encoder::new(message, max_fragment_length),
-        }
+    pub fn new(message: &[u8], max_fragment_length: usize) -> anyhow::Result<Self> {
+        Ok(Self {
+            fountain: crate::fountain::Encoder::new(message, max_fragment_length)?,
+        })
     }
 
     pub fn next_part(&mut self) -> anyhow::Result<String> {
@@ -95,7 +94,7 @@ mod tests {
     #[test]
     fn test_ur_encoder() {
         let ur = make_message_ur(256, "Wolf");
-        let mut encoder = Encoder::new(&ur, 30);
+        let mut encoder = Encoder::new(&ur, 30).unwrap();
         let expected = vec![
             "ur:bytes/1-9/lpadascfadaxcywenbpljkhdcahkadaemejtswhhylkepmykhhtsytsnoyoyaxaedsuttydmmhhpktpmsrjtdkgslpgh",
             "ur:bytes/2-9/lpaoascfadaxcywenbpljkhdcagwdpfnsboxgwlbaawzuefywkdplrsrjynbvygabwjldapfcsgmghhkhstlrdcxaefz",
@@ -126,7 +125,7 @@ mod tests {
     #[test]
     fn test_multipart_ur() {
         let ur = make_message_ur(32767, "Wolf");
-        let mut encoder = Encoder::new(&ur, 1000);
+        let mut encoder = Encoder::new(&ur, 1000).unwrap();
         let mut decoder = Decoder::default();
         while !decoder.complete() {
             let part = encoder.next_part().unwrap();

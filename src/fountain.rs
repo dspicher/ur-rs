@@ -9,36 +9,27 @@ pub struct Encoder {
 }
 
 impl Encoder {
-    #[must_use]
-    pub fn new(message: &[u8], max_fragment_length: usize) -> Self {
+    pub fn new(message: &[u8], max_fragment_length: usize) -> anyhow::Result<Self> {
+        if message.is_empty() {
+            anyhow::bail!("expected non-empty message")
+        }
         let fragment_length = fragment_length(message.len(), max_fragment_length);
         let fragments = partition(message.to_vec(), fragment_length);
-        Self {
+        Ok(Self {
             parts: fragments,
             message_length: message.len(),
             checksum: crate::crc32().checksum(message),
             current_sequence: 0,
-        }
+        })
     }
 
     pub fn next_part(&mut self) -> anyhow::Result<Part> {
         self.current_sequence += 1;
         let indexes = choose_fragments(self.current_sequence, self.parts.len(), self.checksum)?;
-        let mut mixed = vec![
-            0;
-            self.parts
-                .get(0)
-                .ok_or_else(|| anyhow::anyhow!("expected item"))?
-                .len()
-        ];
-        for i in indexes {
-            mixed = xor(
-                &mixed,
-                self.parts
-                    .get(i)
-                    .ok_or_else(|| anyhow::anyhow!("expected item"))?,
-            );
-        }
+        let init = vec![0; self.parts.get(0).unwrap().len()];
+        let mixed = indexes.into_iter().fold(init, |acc, item| {
+            xor(acc.as_slice(), self.parts.get(item).unwrap())
+        });
         Ok(Part {
             sequence: self.current_sequence,
             sequence_count: self.parts.len(),
@@ -496,7 +487,7 @@ mod tests {
     #[test]
     fn test_fountain_encoder() {
         let message = crate::xoshiro::test_utils::make_message("Wolf", 256);
-        let mut encoder = Encoder::new(&message, 30);
+        let mut encoder = Encoder::new(&message, 30).unwrap();
         let expected_parts = vec![
             "seqNum:1, seqLen:9, messageLen:256, checksum:23570951, data:916ec65cf77cadf55cd7f9cda1a1030026ddd42e905b77adc36e4f2d3c",
             "seqNum:2, seqLen:9, messageLen:256, checksum:23570951, data:cba44f7f04f2de44f42d84c374a0e149136f25b01852545961d55f7f7a",
@@ -527,7 +518,7 @@ mod tests {
     #[test]
     fn test_fountain_encoder_cbor() {
         let message = crate::xoshiro::test_utils::make_message("Wolf", 256);
-        let mut encoder = Encoder::new(&message, 30);
+        let mut encoder = Encoder::new(&message, 30).unwrap();
         let expected_parts = vec![
             "8501091901001a0167aa07581d916ec65cf77cadf55cd7f9cda1a1030026ddd42e905b77adc36e4f2d3c",
             "8502091901001a0167aa07581dcba44f7f04f2de44f42d84c374a0e149136f25b01852545961d55f7f7a",
@@ -558,7 +549,7 @@ mod tests {
     #[test]
     fn test_fountain_encoder_is_complete() {
         let message = crate::xoshiro::test_utils::make_message("Wolf", 256);
-        let mut encoder = Encoder::new(&message, 30);
+        let mut encoder = Encoder::new(&message, 30).unwrap();
         for _ in 0..encoder.parts.len() {
             encoder.next_part().unwrap();
         }
@@ -572,7 +563,7 @@ mod tests {
         let max_fragment_length = 1000;
 
         let message = crate::xoshiro::test_utils::make_message(seed, message_size);
-        let mut encoder = Encoder::new(&message, max_fragment_length);
+        let mut encoder = Encoder::new(&message, max_fragment_length).unwrap();
         let mut decoder = Decoder::default();
         while !decoder.complete() {
             let part = encoder.next_part().unwrap();
@@ -582,13 +573,18 @@ mod tests {
     }
 
     #[test]
+    fn test_empty_decoder() {
+        assert!(Encoder::new(&[], 1).is_err());
+    }
+
+    #[test]
     fn test_decoder_skip_some_simple_fragments() {
         let seed = "Wolf";
         let message_size = 32767;
         let max_fragment_length = 1000;
 
         let message = crate::xoshiro::test_utils::make_message(seed, message_size);
-        let mut encoder = Encoder::new(&message, max_fragment_length);
+        let mut encoder = Encoder::new(&message, max_fragment_length).unwrap();
         let mut decoder = Decoder::default();
         let mut skip = false;
         while !decoder.complete() {
@@ -608,7 +604,7 @@ mod tests {
         let max_fragment_length = 10;
 
         let message = crate::xoshiro::test_utils::make_message(seed, message_size);
-        let mut encoder = Encoder::new(&message, max_fragment_length);
+        let mut encoder = Encoder::new(&message, max_fragment_length).unwrap();
         let mut decoder = Decoder::default();
         let part = encoder.next_part().unwrap();
         assert!(decoder.receive(part.clone()).unwrap());
