@@ -23,6 +23,11 @@ impl Encoder {
         })
     }
 
+    #[must_use]
+    pub fn current_sequence(&self) -> usize {
+        self.current_sequence
+    }
+
     pub fn next_part(&mut self) -> anyhow::Result<Part> {
         self.current_sequence += 1;
         let indexes = choose_fragments(self.current_sequence, self.parts.len(), self.checksum)?;
@@ -508,7 +513,8 @@ mod tests {
             "seqNum:19, seqLen:9, messageLen:256, checksum:23570951, data:3171c5dc365766eff25ae47c6f10e7de48cfb8474e050e5fe997a6dc24",
             "seqNum:20, seqLen:9, messageLen:256, checksum:23570951, data:e055c2433562184fa71b4be94f262e200f01c6f74c284b0dc6fae6673f"
         ];
-        for e in expected_parts {
+        for (sequence, e) in expected_parts.into_iter().enumerate() {
+            assert_eq!(encoder.current_sequence(), sequence);
             assert_eq!(encoder.next_part().unwrap().to_string(), e);
         }
     }

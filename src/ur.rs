@@ -38,6 +38,11 @@ impl Encoder {
             body,
         ]))
     }
+
+    #[must_use]
+    pub fn current_index(&self) -> usize {
+        self.fountain.current_sequence()
+    }
 }
 
 #[derive(std::default::Default)]
@@ -128,7 +133,8 @@ mod tests {
             "ur:bytes/19-9/lpbwascfadaxcywenbpljkhdcadekicpaajootjzpsdrbalpeywllbdsnbinaerkurspbncxgslgftvtsrjtksplcpeo",
             "ur:bytes/20-9/lpbbascfadaxcywenbpljkhdcayapmrleeleaxpasfrtrdkncffwjyjzgyetdmlewtkpktgllepfrltataztksmhkbot",
         ];
-        for e in expected {
+        for (index, e) in expected.into_iter().enumerate() {
+            assert_eq!(encoder.current_index(), index);
             assert_eq!(encoder.next_part().unwrap(), e);
         }
     }
