@@ -179,8 +179,7 @@ mod tests {
         let mut encoder = Encoder::new(&ur, 1000, "bytes").unwrap();
         let mut decoder = Decoder::default();
         while !decoder.complete() {
-            let part = encoder.next_part().unwrap();
-            decoder.receive(&part).unwrap();
+            decoder.receive(&encoder.next_part().unwrap()).unwrap();
         }
         assert_eq!(decoder.message().unwrap(), ur);
     }
