@@ -1,11 +1,12 @@
 pub struct Encoder {
     fountain: crate::fountain::Encoder,
+    ur_type: String,
 }
 
 impl Encoder {
-    pub fn encode(ur: &[u8]) -> anyhow::Result<String> {
-        let body = crate::bytewords::encode(ur, &crate::bytewords::Style::Minimal)?;
-        Ok(Self::encode_ur(&["bytes".into(), body]))
+    pub fn encode<T: Into<String>>(data: &[u8], ur_type: T) -> anyhow::Result<String> {
+        let body = crate::bytewords::encode(data, &crate::bytewords::Style::Minimal)?;
+        Ok(Self::encode_ur(&[ur_type.into(), body]))
     }
 
     #[must_use]
@@ -17,16 +18,25 @@ impl Encoder {
         format!("{}:{}", scheme, items.join("/"))
     }
 
-    pub fn new(message: &[u8], max_fragment_length: usize) -> anyhow::Result<Self> {
+    pub fn new<T: Into<String>>(
+        message: &[u8],
+        max_fragment_length: usize,
+        ur_type: T,
+    ) -> anyhow::Result<Self> {
         Ok(Self {
             fountain: crate::fountain::Encoder::new(message, max_fragment_length)?,
+            ur_type: ur_type.into(),
         })
     }
 
     pub fn next_part(&mut self) -> anyhow::Result<String> {
         let part = self.fountain.next_part()?;
         let body = crate::bytewords::encode(&part.cbor()?, &crate::bytewords::Style::Minimal)?;
-        Ok(Self::encode_ur(&["bytes".into(), part.sequence_id(), body]))
+        Ok(Self::encode_ur(&[
+            self.ur_type.clone(),
+            part.sequence_id(),
+            body,
+        ]))
     }
 }
 
@@ -75,6 +85,7 @@ impl Decoder {
 mod tests {
     use super::*;
     use serde_cbor::Value;
+    use std::collections::BTreeMap;
 
     fn make_message_ur(length: usize, seed: &str) -> Vec<u8> {
         let message = crate::xoshiro::test_utils::make_message(seed, length);
@@ -84,7 +95,7 @@ mod tests {
     #[test]
     fn test_single_part_ur() {
         let ur = make_message_ur(50, "Wolf");
-        let encoded = Encoder::encode(&ur).unwrap();
+        let encoded = Encoder::encode(&ur, "bytes").unwrap();
         let expected = "ur:bytes/hdeymejtswhhylkepmykhhtsytsnoyoyaxaedsuttydmmhhpktpmsrjtgwdpfnsboxgwlbaawzuefywkdplrsrjynbvygabwjldapfcsdwkbrkch";
         assert_eq!(encoded, expected);
         let decoded = Decoder::decode(&encoded).unwrap();
@@ -94,7 +105,7 @@ mod tests {
     #[test]
     fn test_ur_encoder() {
         let ur = make_message_ur(256, "Wolf");
-        let mut encoder = Encoder::new(&ur, 30).unwrap();
+        let mut encoder = Encoder::new(&ur, 30, "bytes").unwrap();
         let expected = vec![
             "ur:bytes/1-9/lpadascfadaxcywenbpljkhdcahkadaemejtswhhylkepmykhhtsytsnoyoyaxaedsuttydmmhhpktpmsrjtdkgslpgh",
             "ur:bytes/2-9/lpaoascfadaxcywenbpljkhdcagwdpfnsboxgwlbaawzuefywkdplrsrjynbvygabwjldapfcsgmghhkhstlrdcxaefz",
@@ -123,9 +134,43 @@ mod tests {
     }
 
     #[test]
+    fn test_ur_encoder_bc_crypto_request() {
+        // https://github.com/BlockchainCommons/crypto-commons/blob/67ea252f4a7f295bb347cb046796d5b445b3ad3c/Docs/ur-99-request-response.md
+
+        // 2.1 UUID: tag 37 type bytes(16)
+        let uuid_value = Value::Bytes(hex::decode("020C223A86F7464693FC650EF3CAC047").unwrap());
+        let uuid = Value::Tag(37, Box::new(uuid_value));
+
+        // 2.2.1 crypto-seed-digest: tag 600 type bytes(32)
+        let crypto_seed_digest_value = Value::Bytes(
+            hex::decode("E824467CAFFEAF3BBC3E0CA095E660A9BAD80DDB6A919433A37161908B9A3986")
+                .unwrap(),
+        );
+        let crypto_seed_digest = Value::Tag(600, Box::new(crypto_seed_digest_value));
+
+        // 2.2 crypto-seed: tag 500 type map
+        let mut crypto_seed_map = BTreeMap::new();
+        crypto_seed_map.insert(Value::Integer(1), crypto_seed_digest);
+        let crypto_seed_value = Value::Map(crypto_seed_map);
+        let crypto_seed = Value::Tag(500, Box::new(crypto_seed_value));
+
+        // 1. Top level is a map
+        let mut top_level_map = BTreeMap::new();
+        top_level_map.insert(Value::Integer(1), uuid);
+        top_level_map.insert(Value::Integer(2), crypto_seed);
+        let top_level = Value::Map(top_level_map);
+
+        let data = serde_cbor::to_vec(&top_level).unwrap();
+
+        let e = Encoder::encode(&data, "crypto-request").unwrap();
+        let expected = "ur:crypto-request/oeadtpdagdaobncpftlnylfgfgmuztihbawfsgrtflaotaadwkoyadtaaohdhdcxvsdkfgkepezepefrrffmbnnbmdvahnptrdtpbtuyimmemweootjshsmhlunyeslnameyhsdi";
+        assert_eq!(expected, e);
+    }
+
+    #[test]
     fn test_multipart_ur() {
         let ur = make_message_ur(32767, "Wolf");
-        let mut encoder = Encoder::new(&ur, 1000).unwrap();
+        let mut encoder = Encoder::new(&ur, 1000, "bytes").unwrap();
         let mut decoder = Decoder::default();
         while !decoder.complete() {
             let part = encoder.next_part().unwrap();
