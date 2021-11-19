@@ -58,15 +58,10 @@ pub fn encode(data: &[u8], style: &Style) -> anyhow::Result<String> {
     let data = data.iter().chain(checksum.iter());
     let words: Vec<&str> = match style {
         Style::Standard | Style::Uri => data
-            .map(|b| crate::constants::WORDS.get(*b as usize).copied().unwrap())
+            .map(|&b| crate::constants::WORDS.get(b as usize).copied().unwrap())
             .collect(),
         Style::Minimal => data
-            .map(|b| {
-                crate::constants::MINIMALS
-                    .get(*b as usize)
-                    .copied()
-                    .unwrap()
-            })
+            .map(|&b| crate::constants::MINIMALS.get(b as usize).copied().unwrap())
             .collect(),
     };
     let separator = match style {

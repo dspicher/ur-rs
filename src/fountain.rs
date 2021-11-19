@@ -97,7 +97,7 @@ impl Decoder {
                 .ok_or_else(|| anyhow::anyhow!("expected item"))?;
             let mut to_process = vec![];
             for indexes in self.buffer.keys() {
-                if indexes.iter().any(|idx| idx == &index) {
+                if indexes.iter().any(|&idx| idx == index) {
                     to_process.push(indexes.clone());
                 }
             }
@@ -109,7 +109,7 @@ impl Decoder {
                 let mut new_indexes = indexes.clone();
                 let to_remove = indexes
                     .iter()
-                    .position(|x| *x == index)
+                    .position(|&x| x == index)
                     .ok_or_else(|| anyhow::anyhow!("expected item"))?;
                 new_indexes.remove(to_remove);
                 part.data = xor(&part.data, &simple.data);
@@ -129,7 +129,7 @@ impl Decoder {
         let mut indexes = part.indexes()?;
         let mut to_remove = vec![];
         for index in indexes.clone() {
-            if self.decoded.keys().any(|k| *k == index) {
+            if self.decoded.keys().any(|&k| k == index) {
                 to_remove.push(index);
             }
         }
@@ -139,7 +139,7 @@ impl Decoder {
         for remove in to_remove {
             let idx_to_remove = indexes
                 .iter()
-                .position(|x| *x == remove)
+                .position(|&x| x == remove)
                 .ok_or_else(|| anyhow::anyhow!("expected item"))?;
             indexes.remove(idx_to_remove);
             part.data = xor(
@@ -207,7 +207,7 @@ impl Decoder {
             .ok_or_else(|| anyhow::anyhow!("expected item"))?
             .to_vec()
             .iter()
-            .all(|x| *x == 0)
+            .all(|&x| x == 0)
         {
             return Err(anyhow::anyhow!("invalid padding detected"));
         }
