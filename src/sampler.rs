@@ -21,16 +21,9 @@ impl Weighted {
         for w in &mut weights {
             *w *= count as f64 / summed;
         }
-        let mut s: Vec<usize> = Vec::with_capacity(count);
-        let mut l: Vec<usize> = Vec::with_capacity(count);
-        for j in 1..=count {
-            let i = count - j;
-            if *weights.get(i).unwrap() < 1.0 {
-                s.push(i);
-            } else {
-                l.push(i);
-            }
-        }
+        let (mut s, mut l): (Vec<usize>, Vec<usize>) = (1..=count)
+            .map(|j| count - j)
+            .partition(|&j| *weights.get(j).unwrap() < 1.0);
 
         let mut probs: Vec<f64> = vec![0.0; count];
         let mut aliases: Vec<u32> = vec![0; count];
