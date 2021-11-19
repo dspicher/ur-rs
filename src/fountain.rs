@@ -95,12 +95,12 @@ impl Decoder {
                 .queue
                 .pop_front()
                 .ok_or_else(|| anyhow::anyhow!("expected item"))?;
-            let mut to_process = vec![];
-            for indexes in self.buffer.keys() {
-                if indexes.iter().any(|&idx| idx == index) {
-                    to_process.push(indexes.clone());
-                }
-            }
+            let to_process: Vec<Vec<usize>> = self
+                .buffer
+                .keys()
+                .filter(|&idxs| idxs.iter().any(|&idx| idx == index))
+                .cloned()
+                .collect();
             for indexes in to_process {
                 let mut part = self
                     .buffer
@@ -127,12 +127,11 @@ impl Decoder {
 
     pub fn process_complex(&mut self, mut part: Part) -> anyhow::Result<()> {
         let mut indexes = part.indexes()?;
-        let mut to_remove = vec![];
-        for index in indexes.clone() {
-            if self.decoded.keys().any(|&k| k == index) {
-                to_remove.push(index);
-            }
-        }
+        let to_remove: Vec<usize> = indexes
+            .clone()
+            .into_iter()
+            .filter(|idx| self.decoded.keys().any(|k| k == idx))
+            .collect();
         if indexes.len() == to_remove.len() {
             return Ok(());
         }
