@@ -19,26 +19,28 @@ pub fn decode(encoded: &str, style: &Style) -> Result<Vec<u8>, Error> {
         Style::Uri => "-",
         Style::Minimal => return decode_minimal(encoded),
     };
-    let mut data = vec![];
-    for word in encoded.split(separator) {
-        match crate::constants::WORD_IDXS.get(word) {
-            Some(idx) => data.push(*idx),
-            None => return Err(Error::InvalidWord),
-        }
-    }
-    strip_checksum(&data)
+    decode_from_index(&mut encoded.split(separator), &crate::constants::WORD_IDXS)
 }
 
 fn decode_minimal(encoded: &str) -> Result<Vec<u8>, Error> {
-    let mut data = vec![];
-    for idx in (0..encoded.len()).step_by(2) {
-        let substr = encoded.get(idx..idx + 2).unwrap();
-        match crate::constants::MINIMAL_IDXS.get(substr) {
-            Some(idx) => data.push(*idx),
-            None => return Err(Error::InvalidWord),
-        }
-    }
-    strip_checksum(&data)
+    decode_from_index(
+        &mut (0..encoded.len())
+            .step_by(2)
+            .map(|idx| encoded.get(idx..idx + 2).unwrap()),
+        &crate::constants::MINIMAL_IDXS,
+    )
+}
+
+fn decode_from_index(
+    keys: &mut dyn Iterator<Item = &str>,
+    indexes: &phf::Map<&'static str, u8>,
+) -> Result<Vec<u8>, Error> {
+    strip_checksum(
+        &keys
+            .map(|k| indexes.get(k).copied())
+            .collect::<Option<Vec<_>>>()
+            .ok_or(Error::InvalidWord)?,
+    )
 }
 
 fn strip_checksum(data: &[u8]) -> Result<Vec<u8>, Error> {
