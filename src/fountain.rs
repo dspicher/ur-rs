@@ -350,9 +350,9 @@ pub fn partition(mut data: Vec<u8>, fragment_length: usize) -> Vec<Vec<u8>> {
     data.chunks(fragment_length).map(|c| c.to_vec()).collect()
 }
 
-pub fn join(data: Vec<Vec<u8>>, message_length: usize) -> Result<Vec<u8>, &'static str> {
+pub fn join(data: Vec<Vec<u8>>, message_length: usize) -> anyhow::Result<Vec<u8>> {
     if data.iter().map(Vec::len).sum::<usize>() < message_length {
-        return Err("insufficient data");
+        anyhow::bail!("insufficient data");
     }
     let mut flattened: Vec<u8> = data.into_iter().flatten().collect();
     flattened.truncate(message_length);
