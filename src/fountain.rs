@@ -200,8 +200,7 @@ impl Decoder {
             })
             .collect::<Result<Vec<&Part>, anyhow::Error>>()?
             .iter()
-            .map(|p| p.data.clone())
-            .fold(vec![], |a, b| [a, b].concat());
+            .fold(vec![], |a, b| [a, b.data.clone()].concat());
         if !combined
             .get(self.message_length..)
             .ok_or_else(|| anyhow::anyhow!("expected item"))?
