@@ -19,7 +19,7 @@ assert_eq!(encoded, "gujljnihcxidinjthsjpkkcxiehsjyhsnsgdmkht");
 This uses the minimal bytewords encoding scheme demonstrated above.
 ```rust
 let data = String::from("Some binary data").repeat(100);
-let mut encoder = ur::Encoder::new(data.as_bytes(), 10);
+let mut encoder = ur::Encoder::new(data.as_bytes(), 10, "bytes").unwrap();
 let part = encoder.next_part().unwrap();
 assert_eq!(part, "ur:bytes/1-160/lpadcsnbcfamfzcybkmuldbwgegujljnihcxidinjthsjpmezolsld");
 ```
@@ -32,7 +32,7 @@ transmissions, and still successfully restores the payload.
 ```rust
 use ur::{Decoder, Encoder};
 let data = String::from("Some binary data").repeat(100);
-let mut encoder = Encoder::new(data.as_bytes(), 10);
+let mut encoder = Encoder::new(data.as_bytes(), 10, "bytes").unwrap();
 let mut decoder = Decoder::default();
 while !decoder.complete() {
     let part = encoder.next_part().unwrap();
