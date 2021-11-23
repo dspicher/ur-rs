@@ -24,6 +24,8 @@ jobs:
       run: cargo install cargo-sort-ck
     - name: Check sorted dependencies
       run: cargo sort-ck
+    - name: Check README is up-to-date
+      run: cargo install cargo-readme && cargo readme | cmp README.md
     - name: Clippy
       run: cargo clippy --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -D clippy::dbg-macro -D clippy::indexing-slicing -A clippy::missing-errors-doc -A clippy::missing-panics-doc
     - name: Build
