@@ -20,7 +20,7 @@ The following building blocks interact to achieve this goal:
 
 ## Other implementations
 This Rust implementation, in particular its test vectors, is based on the following reference implementations:
-- C++: [bc-ur](https://github.com/BlockchainCommons/bc-ur/)
+- C++: [bc-ur](https://github.com/BlockchainCommons/bc-ur/)d
 - Swift: [URKit](https://github.com/blockchaincommons/URKit)
 
 ## Contributing
