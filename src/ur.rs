@@ -53,18 +53,15 @@ pub struct Decoder {
 impl Decoder {
     pub fn decode(value: &str) -> anyhow::Result<Vec<u8>> {
         match value.strip_prefix("ur:") {
-            Some(val) => match val.strip_prefix("bytes/") {
-                Some(v) => Ok(crate::bytewords::decode(
-                    match v.find('/') {
-                        None => v,
-                        Some(idx) => v
-                            .get(idx + 1..)
-                            .ok_or_else(|| anyhow::anyhow!("expected items"))?,
-                    },
-                    &crate::bytewords::Style::Minimal,
-                )?),
-                None => Err(anyhow::anyhow!("Invalid type")),
-            },
+            Some(v) => Ok(crate::bytewords::decode(
+                match v.rfind('/') {
+                    None => v,
+                    Some(idx) => v
+                        .get(idx + 1..)
+                        .ok_or_else(|| anyhow::anyhow!("expected items"))?,
+                },
+                &crate::bytewords::Style::Minimal,
+            )?),
             None => Err(anyhow::anyhow!("Invalid Scheme")),
         }
     }
@@ -140,8 +137,8 @@ mod tests {
     }
 
     #[test]
-    fn test_ur_encoder_bc_crypto_request() {
-        // https://github.com/BlockchainCommons/crypto-commons/blob/67ea252f4a7f295bb347cb046796d5b445b3ad3c/Docs/ur-99-request-response.md
+    fn test_ur_encoder_decoder_bc_crypto_request() {
+        // https://github.com/BlockchainCommons/crypto-commons/blob/67ea252f4a7f295bb347cb046796d5b445b3ad3c/Docs/ur-99-request-response.md#the-seed-request
 
         // 2.1 UUID: tag 37 type bytes(16)
         let uuid_value = Value::Bytes(hex::decode("020C223A86F7464693FC650EF3CAC047").unwrap());
@@ -171,6 +168,10 @@ mod tests {
         let e = Encoder::encode(&data, "crypto-request").unwrap();
         let expected = "ur:crypto-request/oeadtpdagdaobncpftlnylfgfgmuztihbawfsgrtflaotaadwkoyadtaaohdhdcxvsdkfgkepezepefrrffmbnnbmdvahnptrdtpbtuyimmemweootjshsmhlunyeslnameyhsdi";
         assert_eq!(expected, e);
+
+        // Decoding should yield the same data
+        let d = Decoder::decode(e.as_str()).unwrap();
+        assert_eq!(data, d);
     }
 
     #[test]
@@ -192,12 +193,7 @@ mod tests {
                 .to_string(),
             "Invalid Scheme"
         );
-        assert_eq!(
-            Decoder::decode("ur:byts/aeadaolazmjendeoti")
-                .unwrap_err()
-                .to_string(),
-            "Invalid type"
-        );
         Decoder::decode("ur:bytes/aeadaolazmjendeoti").unwrap();
+        Decoder::decode("ur:whatever/aeadaolazmjendeoti").unwrap();
     }
 }
