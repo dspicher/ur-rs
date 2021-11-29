@@ -45,7 +45,7 @@ impl Encoder {
     }
 }
 
-#[derive(std::default::Default)]
+#[derive(Default)]
 pub struct Decoder {
     fountain: crate::fountain::Decoder,
 }
