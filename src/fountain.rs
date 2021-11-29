@@ -255,20 +255,17 @@ impl<'de> Deserialize<'de> for Part {
                     }
 
                     let check_cbor_number = |array: &Vec<Value>, index| -> Result<u32, D::Error> {
-                        let err = Err(serde::de::Error::custom(format!(
-                            "unexpected item at position {}",
-                            index
-                        )));
                         match array.get(index).unwrap() {
-                            Value::Integer(integer) => {
-                                if *integer > i128::from(u32::MAX) {
-                                    return err;
-                                }
+                            Value::Integer(integer) if *integer <= i128::from(u32::MAX) =>
+                            {
                                 #[allow(clippy::cast_possible_truncation)]
                                 #[allow(clippy::cast_sign_loss)]
                                 Ok(*integer as u32)
                             }
-                            _ => err,
+                            _ => Err(serde::de::Error::custom(format!(
+                                "unexpected item at position {}",
+                                index
+                            ))),
                         }
                     };
 
