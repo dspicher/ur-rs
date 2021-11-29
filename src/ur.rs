@@ -53,15 +53,19 @@ pub struct Decoder {
 impl Decoder {
     pub fn decode(value: &str) -> anyhow::Result<Vec<u8>> {
         match value.strip_prefix("ur:") {
-            Some(v) => Ok(crate::bytewords::decode(
-                match v.rfind('/') {
-                    None => v,
-                    Some(idx) => v
-                        .get(idx + 1..)
-                        .ok_or_else(|| anyhow::anyhow!("expected items"))?,
-                },
-                &crate::bytewords::Style::Minimal,
-            )?),
+            Some(v) => {
+                let mut parts = v.rsplit('/');
+                // rsplit will always return at least one item
+                let payload = parts.next().unwrap();
+                match parts.count() {
+                    0 => Err(anyhow::anyhow!("No type specified")),
+                    1 | 2 => Ok(crate::bytewords::decode(
+                        payload,
+                        &crate::bytewords::Style::Minimal,
+                    )?),
+                    _ => Err(anyhow::anyhow!("Invalid encoding: too many separators '/'")),
+                }
+            }
             None => Err(anyhow::anyhow!("Invalid Scheme")),
         }
     }
@@ -192,6 +196,18 @@ mod tests {
                 .unwrap_err()
                 .to_string(),
             "Invalid Scheme"
+        );
+        assert_eq!(
+            Decoder::decode("ur:aeadaolazmjendeoti")
+                .unwrap_err()
+                .to_string(),
+            "No type specified"
+        );
+        assert_eq!(
+            Decoder::decode("ur:bytes/seq/toomuch/aeadaolazmjendeoti")
+                .unwrap_err()
+                .to_string(),
+            "Invalid encoding: too many separators '/'"
         );
         Decoder::decode("ur:bytes/aeadaolazmjendeoti").unwrap();
         Decoder::decode("ur:whatever/aeadaolazmjendeoti").unwrap();
