@@ -12,6 +12,7 @@ anyhow = "1.0.51"
 bitcoin_hashes = "0.10.0"
 crc = "2.1.0"
 hex = "0.4.3"
+lettre = "*"
 phf = { version = "0.10.0", features = ["macros"] }
 rand_xoshiro = "0.6.0"
 serde = "1.0.130"
