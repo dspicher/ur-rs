@@ -1,1 +1,4 @@
-/target
+target
+
+fuzz/hfuzz_target
+fuzz/hfuzz_workspace

@@ -1,0 +1,33 @@
+name: Fuzz
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  HFUZZ_RUN_ARGS: --run_time 120 --exit_upon_crash -v
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        fuzz_target: [bytewords_encode, ur_encode]
+    steps:
+      - name: Install test dependencies
+        run: sudo apt-get update -y && sudo apt-get install -y build-essential binutils-dev libunwind-dev libblocksruntime-dev liblzma-dev
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+      - run: cargo install honggfuzz
+      - name: Fuzz
+        working-directory: ./fuzz
+        run: |
+          cargo hfuzz run ${{ matrix.fuzz_target }}
+          test $(ls hfuzz_workspace/${{ matrix.fuzz_target }} | wc -l) -eq 1
