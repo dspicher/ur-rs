@@ -32,3 +32,9 @@ jobs:
       run: cargo build
     - name: Run tests
       run: cargo test
+    - name: Lint fuzz
+      working-directory: ./fuzz
+      run: |
+        cargo fmt -- --check
+        cargo sort-ck
+        cargo clippy --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -D clippy::dbg-macro -D clippy::indexing-slicing -A clippy::missing-errors-doc -A clippy::missing-panics-doc

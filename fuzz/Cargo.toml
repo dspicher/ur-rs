@@ -1,0 +1,17 @@
+[package]
+name = "fuzz"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+honggfuzz = "0.5.54"
+ur = { path = ".." }
+
+[[bin]]
+name = "bytewords_encode"
+path = "fuzz_targets/bytewords_encode.rs"
+
+[[bin]]
+name = "ur_encode"
+path = "fuzz_targets/ur_encode.rs"
