@@ -45,6 +45,11 @@ impl Encoder {
     }
 
     #[must_use]
+    pub fn fragment_count(&self) -> usize {
+        self.parts.len()
+    }
+
+    #[must_use]
     pub fn complete(&self) -> bool {
         self.current_sequence >= self.parts.len()
     }
