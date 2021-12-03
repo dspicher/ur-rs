@@ -13,6 +13,9 @@ impl Encoder {
         if message.is_empty() {
             anyhow::bail!("expected non-empty message")
         }
+        if max_fragment_length == 0 {
+            anyhow::bail!("expected positive maximum fragment length")
+        }
         let fragment_length = fragment_length(message.len(), max_fragment_length);
         let fragments = partition(message.to_vec(), fragment_length);
         Ok(Self {
