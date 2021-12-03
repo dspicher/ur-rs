@@ -43,6 +43,11 @@ impl Encoder {
     pub fn current_index(&self) -> usize {
         self.fountain.current_sequence()
     }
+
+    #[must_use]
+    pub fn fragment_count(&self) -> usize {
+        self.fountain.fragment_count()
+    }
 }
 
 #[derive(Default)]
