@@ -5,6 +5,7 @@ edition = "2021"
 
 
 [dependencies]
+hex = "*"
 honggfuzz = "0.5.54"
 ur = { path = ".." }
 
