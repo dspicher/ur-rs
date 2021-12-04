@@ -1,6 +1,7 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_cbor::Value;
 
+#[derive(Debug)]
 pub struct Encoder {
     parts: Vec<Vec<u8>>,
     message_length: usize,
@@ -553,6 +554,14 @@ mod tests {
         for e in expected_parts {
             assert_eq!(hex::encode(encoder.next_part().unwrap().cbor().unwrap()), e);
         }
+    }
+
+    #[test]
+    fn test_fountain_encoder_zero_max_length() {
+        assert_eq!(
+            Encoder::new("foo".as_bytes(), 0).unwrap_err().to_string(),
+            "expected positive maximum fragment length"
+        );
     }
 
     #[test]
