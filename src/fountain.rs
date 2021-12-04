@@ -3,7 +3,7 @@ use serde_cbor::Value;
 
 #[derive(Debug)]
 pub struct Encoder {
-    parts: Vec<Vec<u8>>,
+    fragments: Vec<Vec<u8>>,
     message_length: usize,
     checksum: u32,
     current_sequence: usize,
@@ -20,7 +20,7 @@ impl Encoder {
         let fragment_length = fragment_length(message.len(), max_fragment_length);
         let fragments = partition(message.to_vec(), fragment_length);
         Ok(Self {
-            parts: fragments,
+            fragments,
             message_length: message.len(),
             checksum: crate::crc32().checksum(message),
             current_sequence: 0,
@@ -32,16 +32,16 @@ impl Encoder {
         self.current_sequence
     }
 
-    pub fn next_part(&mut self) -> anyhow::Result<Part> {
+    pub fn next_fragment(&mut self) -> anyhow::Result<Fragment> {
         self.current_sequence += 1;
-        let indexes = choose_fragments(self.current_sequence, self.parts.len(), self.checksum)?;
-        let init = vec![0; self.parts.get(0).unwrap().len()];
+        let indexes = choose_fragments(self.current_sequence, self.fragments.len(), self.checksum)?;
+        let init = vec![0; self.fragments.get(0).unwrap().len()];
         let mixed = indexes.into_iter().fold(init, |acc, item| {
-            xor(acc.as_slice(), self.parts.get(item).unwrap())
+            xor(acc.as_slice(), self.fragments.get(item).unwrap())
         });
-        Ok(Part {
+        Ok(Fragment {
             sequence: self.current_sequence,
-            sequence_count: self.parts.len(),
+            sequence_count: self.fragments.len(),
             message_length: self.message_length,
             checksum: self.checksum,
             data: mixed,
@@ -50,21 +50,21 @@ impl Encoder {
 
     #[must_use]
     pub fn fragment_count(&self) -> usize {
-        self.parts.len()
+        self.fragments.len()
     }
 
     #[must_use]
     pub fn complete(&self) -> bool {
-        self.current_sequence >= self.parts.len()
+        self.current_sequence >= self.fragments.len()
     }
 }
 
 #[derive(Default)]
 pub struct Decoder {
-    decoded: std::collections::HashMap<usize, Part>,
+    decoded: std::collections::HashMap<usize, Fragment>,
     received: std::collections::HashSet<Vec<usize>>,
-    buffer: std::collections::HashMap<Vec<usize>, Part>,
-    queue: std::collections::VecDeque<(usize, Part)>,
+    buffer: std::collections::HashMap<Vec<usize>, Fragment>,
+    queue: std::collections::VecDeque<(usize, Fragment)>,
     sequence_count: usize,
     message_length: usize,
     checksum: u32,
@@ -72,38 +72,38 @@ pub struct Decoder {
 }
 
 impl Decoder {
-    pub fn receive(&mut self, part: Part) -> anyhow::Result<bool> {
+    pub fn receive(&mut self, fragment: Fragment) -> anyhow::Result<bool> {
         if self.complete() {
             return Ok(false);
         }
         if self.received.is_empty() {
-            self.sequence_count = part.sequence_count;
-            self.message_length = part.message_length;
-            self.checksum = part.checksum;
-            self.fragment_length = part.data.len();
-        } else if !self.validate(&part) {
-            anyhow::bail!("part is inconsistent with previous ones")
+            self.sequence_count = fragment.sequence_count;
+            self.message_length = fragment.message_length;
+            self.checksum = fragment.checksum;
+            self.fragment_length = fragment.data.len();
+        } else if !self.validate(&fragment) {
+            anyhow::bail!("fragment is inconsistent with previous ones")
         }
-        let indexes = part.indexes()?;
+        let indexes = fragment.indexes()?;
         if self.received.contains(&indexes) {
             return Ok(false);
         }
         self.received.insert(indexes);
-        if part.is_simple()? {
-            self.process_simple(part)?;
+        if fragment.is_simple()? {
+            self.process_simple(fragment)?;
         } else {
-            self.process_complex(part)?;
+            self.process_complex(fragment)?;
         }
         Ok(true)
     }
 
-    pub fn process_simple(&mut self, part: Part) -> anyhow::Result<()> {
-        let index = *part
+    pub fn process_simple(&mut self, fragment: Fragment) -> anyhow::Result<()> {
+        let index = *fragment
             .indexes()?
             .get(0)
             .ok_or_else(|| anyhow::anyhow!("expected item"))?;
-        self.decoded.insert(index, part.clone());
-        self.queue.push_back((index, part));
+        self.decoded.insert(index, fragment.clone());
+        self.queue.push_back((index, fragment));
         self.process_queue()?;
         Ok(())
     }
@@ -121,7 +121,7 @@ impl Decoder {
                 .cloned()
                 .collect();
             for indexes in to_process {
-                let mut part = self
+                let mut fragment = self
                     .buffer
                     .remove(&indexes)
                     .ok_or_else(|| anyhow::anyhow!("expected item"))?;
@@ -131,21 +131,22 @@ impl Decoder {
                     .position(|&x| x == index)
                     .ok_or_else(|| anyhow::anyhow!("expected item"))?;
                 new_indexes.remove(to_remove);
-                part.data = xor(&part.data, &simple.data);
+                fragment.data = xor(&fragment.data, &simple.data);
                 if new_indexes.len() == 1 {
                     self.decoded
-                        .insert(*new_indexes.get(0).unwrap(), part.clone());
-                    self.queue.push_back((*new_indexes.get(0).unwrap(), part));
+                        .insert(*new_indexes.get(0).unwrap(), fragment.clone());
+                    self.queue
+                        .push_back((*new_indexes.get(0).unwrap(), fragment));
                 } else {
-                    self.buffer.insert(new_indexes, part);
+                    self.buffer.insert(new_indexes, fragment);
                 }
             }
         }
         Ok(())
     }
 
-    pub fn process_complex(&mut self, mut part: Part) -> anyhow::Result<()> {
-        let mut indexes = part.indexes()?;
+    pub fn process_complex(&mut self, mut fragment: Fragment) -> anyhow::Result<()> {
+        let mut indexes = fragment.indexes()?;
         let to_remove: Vec<usize> = indexes
             .clone()
             .into_iter()
@@ -160,8 +161,8 @@ impl Decoder {
                 .position(|&x| x == remove)
                 .ok_or_else(|| anyhow::anyhow!("expected item"))?;
             indexes.remove(idx_to_remove);
-            part.data = xor(
-                &part.data,
+            fragment.data = xor(
+                &fragment.data,
                 &self
                     .decoded
                     .get(&remove)
@@ -170,10 +171,11 @@ impl Decoder {
             );
         }
         if indexes.len() == 1 {
-            self.decoded.insert(*indexes.get(0).unwrap(), part.clone());
-            self.queue.push_back((*indexes.get(0).unwrap(), part));
+            self.decoded
+                .insert(*indexes.get(0).unwrap(), fragment.clone());
+            self.queue.push_back((*indexes.get(0).unwrap(), fragment));
         } else {
-            self.buffer.insert(indexes, part);
+            self.buffer.insert(indexes, fragment);
         }
         Ok(())
     }
@@ -184,17 +186,17 @@ impl Decoder {
     }
 
     #[must_use]
-    pub fn validate(&self, part: &Part) -> bool {
-        if part.sequence_count != self.sequence_count {
+    pub fn validate(&self, fragment: &Fragment) -> bool {
+        if fragment.sequence_count != self.sequence_count {
             return false;
         }
-        if part.message_length != self.message_length {
+        if fragment.message_length != self.message_length {
             return false;
         }
-        if part.checksum != self.checksum {
+        if fragment.checksum != self.checksum {
             return false;
         }
-        if part.data.len() != self.fragment_length {
+        if fragment.data.len() != self.fragment_length {
             return false;
         }
         true
@@ -210,7 +212,7 @@ impl Decoder {
                     .get(&idx)
                     .ok_or_else(|| anyhow::anyhow!("expected item"))
             })
-            .collect::<Result<Vec<&Part>, anyhow::Error>>()?
+            .collect::<Result<Vec<&Fragment>, anyhow::Error>>()?
             .iter()
             .fold(vec![], |a, b| [a, b.data.clone()].concat());
         if !combined
@@ -229,7 +231,7 @@ impl Decoder {
 }
 
 #[derive(Clone, Debug)]
-pub struct Part {
+pub struct Fragment {
     sequence: usize,
     sequence_count: usize,
     message_length: usize,
@@ -237,7 +239,7 @@ pub struct Part {
     data: Vec<u8>,
 }
 
-impl Serialize for Part {
+impl Serialize for Fragment {
     fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         #[allow(clippy::cast_possible_truncation)]
         let data = vec![
@@ -252,7 +254,7 @@ impl Serialize for Part {
     }
 }
 
-impl<'de> Deserialize<'de> for Part {
+impl<'de> Deserialize<'de> for Fragment {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         match Value::deserialize(deserializer) {
             Ok(value) => match value {
@@ -299,13 +301,13 @@ impl<'de> Deserialize<'de> for Part {
                 _ => Err(serde::de::Error::custom("invalid top-level item")),
             },
             Err(_) => Err(serde::de::Error::custom(
-                "invalid cbor serialization for Part",
+                "invalid cbor serialization for Fragment",
             )),
         }
     }
 }
 
-impl std::fmt::Display for Part {
+impl std::fmt::Display for Fragment {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -319,7 +321,7 @@ impl std::fmt::Display for Part {
     }
 }
 
-impl Part {
+impl Fragment {
     pub fn from_cbor(cbor: &[u8]) -> anyhow::Result<Self> {
         serde_cbor::from_slice(cbor).map_err(|e| anyhow::anyhow!(e))
     }
@@ -495,7 +497,7 @@ mod tests {
     fn test_fountain_encoder() {
         let message = crate::xoshiro::test_utils::make_message("Wolf", 256);
         let mut encoder = Encoder::new(&message, 30).unwrap();
-        let expected_parts = vec![
+        let expected_fragments = vec![
             "seqNum:1, seqLen:9, messageLen:256, checksum:23570951, data:916ec65cf77cadf55cd7f9cda1a1030026ddd42e905b77adc36e4f2d3c",
             "seqNum:2, seqLen:9, messageLen:256, checksum:23570951, data:cba44f7f04f2de44f42d84c374a0e149136f25b01852545961d55f7f7a",
             "seqNum:3, seqLen:9, messageLen:256, checksum:23570951, data:8cde6d0e2ec43f3b2dcb644a2209e8c9e34af5c4747984a5e873c9cf5f",
@@ -517,9 +519,9 @@ mod tests {
             "seqNum:19, seqLen:9, messageLen:256, checksum:23570951, data:3171c5dc365766eff25ae47c6f10e7de48cfb8474e050e5fe997a6dc24",
             "seqNum:20, seqLen:9, messageLen:256, checksum:23570951, data:e055c2433562184fa71b4be94f262e200f01c6f74c284b0dc6fae6673f"
         ];
-        for (sequence, e) in expected_parts.into_iter().enumerate() {
+        for (sequence, e) in expected_fragments.into_iter().enumerate() {
             assert_eq!(encoder.current_sequence(), sequence);
-            assert_eq!(encoder.next_part().unwrap().to_string(), e);
+            assert_eq!(encoder.next_fragment().unwrap().to_string(), e);
         }
     }
 
@@ -529,7 +531,7 @@ mod tests {
         let size = 256;
         let message = crate::xoshiro::test_utils::make_message("Wolf", size);
         let mut encoder = Encoder::new(&message, max_fragment_length).unwrap();
-        let expected_parts = vec![
+        let expected_fragments = vec![
             "8501091901001a0167aa07581d916ec65cf77cadf55cd7f9cda1a1030026ddd42e905b77adc36e4f2d3c",
             "8502091901001a0167aa07581dcba44f7f04f2de44f42d84c374a0e149136f25b01852545961d55f7f7a",
             "8503091901001a0167aa07581d8cde6d0e2ec43f3b2dcb644a2209e8c9e34af5c4747984a5e873c9cf5f",
@@ -552,8 +554,11 @@ mod tests {
             "8514091901001a0167aa07581de055c2433562184fa71b4be94f262e200f01c6f74c284b0dc6fae6673f",
         ];
         assert_eq!(encoder.fragment_count(), size / max_fragment_length + 1);
-        for e in expected_parts {
-            assert_eq!(hex::encode(encoder.next_part().unwrap().cbor().unwrap()), e);
+        for e in expected_fragments {
+            assert_eq!(
+                hex::encode(encoder.next_fragment().unwrap().cbor().unwrap()),
+                e
+            );
         }
     }
 
@@ -569,8 +574,8 @@ mod tests {
     fn test_fountain_encoder_is_complete() {
         let message = crate::xoshiro::test_utils::make_message("Wolf", 256);
         let mut encoder = Encoder::new(&message, 30).unwrap();
-        for _ in 0..encoder.parts.len() {
-            encoder.next_part().unwrap();
+        for _ in 0..encoder.fragments.len() {
+            encoder.next_fragment().unwrap();
         }
         assert!(encoder.complete());
     }
@@ -585,8 +590,8 @@ mod tests {
         let mut encoder = Encoder::new(&message, max_fragment_length).unwrap();
         let mut decoder = Decoder::default();
         while !decoder.complete() {
-            let part = encoder.next_part().unwrap();
-            let _next = decoder.receive(part);
+            let fragment = encoder.next_fragment().unwrap();
+            let _next = decoder.receive(fragment);
         }
         assert_eq!(decoder.message().unwrap(), message);
     }
@@ -607,9 +612,9 @@ mod tests {
         let mut decoder = Decoder::default();
         let mut skip = false;
         while !decoder.complete() {
-            let part = encoder.next_part().unwrap();
+            let fragment = encoder.next_fragment().unwrap();
             if !skip {
-                let _next = decoder.receive(part);
+                let _next = decoder.receive(fragment);
             }
             skip = !skip;
         }
@@ -625,143 +630,143 @@ mod tests {
         let message = crate::xoshiro::test_utils::make_message(seed, message_size);
         let mut encoder = Encoder::new(&message, max_fragment_length).unwrap();
         let mut decoder = Decoder::default();
-        let part = encoder.next_part().unwrap();
-        assert!(decoder.receive(part.clone()).unwrap());
+        let fragment = encoder.next_fragment().unwrap();
+        assert!(decoder.receive(fragment.clone()).unwrap());
         // same indexes
-        assert!(!decoder.receive(part).unwrap());
+        assert!(!decoder.receive(fragment).unwrap());
         // non-valid
-        let mut part = encoder.next_part().unwrap();
-        part.checksum += 1;
+        let mut fragment = encoder.next_fragment().unwrap();
+        fragment.checksum += 1;
         assert_eq!(
-            decoder.receive(part).unwrap_err().to_string(),
-            "part is inconsistent with previous ones"
+            decoder.receive(fragment).unwrap_err().to_string(),
+            "fragment is inconsistent with previous ones"
         );
         // decoder complete
         while !decoder.complete() {
-            let part = encoder.next_part().unwrap();
-            decoder.receive(part).unwrap();
+            let fragment = encoder.next_fragment().unwrap();
+            decoder.receive(fragment).unwrap();
         }
-        let part = encoder.next_part().unwrap();
-        assert!(!decoder.receive(part).unwrap());
+        let fragment = encoder.next_fragment().unwrap();
+        assert!(!decoder.receive(fragment).unwrap());
     }
 
     #[test]
-    fn test_decoder_part_validation() {
+    fn test_decoder_fragment_validation() {
         let mut encoder = Encoder::new("foo".as_bytes(), 2).unwrap();
         let mut decoder = Decoder::default();
-        let mut part = encoder.next_part().unwrap();
-        assert!(decoder.receive(part.clone()).unwrap());
-        assert!(decoder.validate(&part));
-        part.checksum += 1;
-        assert!(!decoder.validate(&part));
-        part.checksum -= 1;
-        part.message_length += 1;
-        assert!(!decoder.validate(&part));
-        part.message_length -= 1;
-        part.sequence_count += 1;
-        assert!(!decoder.validate(&part));
-        part.sequence_count -= 1;
-        part.data.push(1);
-        assert!(!decoder.validate(&part));
+        let mut fragment = encoder.next_fragment().unwrap();
+        assert!(decoder.receive(fragment.clone()).unwrap());
+        assert!(decoder.validate(&fragment));
+        fragment.checksum += 1;
+        assert!(!decoder.validate(&fragment));
+        fragment.checksum -= 1;
+        fragment.message_length += 1;
+        assert!(!decoder.validate(&fragment));
+        fragment.message_length -= 1;
+        fragment.sequence_count += 1;
+        assert!(!decoder.validate(&fragment));
+        fragment.sequence_count -= 1;
+        fragment.data.push(1);
+        assert!(!decoder.validate(&fragment));
     }
 
     #[test]
     fn test_fountain_cbor() {
-        let part = Part {
+        let fragment = Fragment {
             sequence: 12,
             sequence_count: 8,
             message_length: 100,
             checksum: 0x1234_5678,
             data: vec![1, 5, 3, 3, 5],
         };
-        let cbor = part.cbor().unwrap();
-        let part2 = Part::from_cbor(&cbor).unwrap();
-        let cbor2 = part2.cbor().unwrap();
+        let cbor = fragment.cbor().unwrap();
+        let fragment2 = Fragment::from_cbor(&cbor).unwrap();
+        let cbor2 = fragment2.cbor().unwrap();
         assert_eq!(cbor, cbor2);
     }
 
     #[test]
-    fn test_part_from_cbor_errors() {
+    fn test_fragment_from_cbor_errors() {
         // 0x18 is the first byte value that doesn't directly encode a u8,
         // but implies a following value
         assert_eq!(
-            Part::from_cbor(&[0x18]).unwrap_err().to_string(),
-            "invalid cbor serialization for Part"
+            Fragment::from_cbor(&[0x18]).unwrap_err().to_string(),
+            "invalid cbor serialization for Fragment"
         );
         // the top-level item must be an array
         assert_eq!(
-            Part::from_cbor(&[0x1]).unwrap_err().to_string(),
+            Fragment::from_cbor(&[0x1]).unwrap_err().to_string(),
             "invalid top-level item"
         );
         // the array must be of length five
         assert_eq!(
-            Part::from_cbor(&[0x84, 0x1, 0x2, 0x3, 0x4])
+            Fragment::from_cbor(&[0x84, 0x1, 0x2, 0x3, 0x4])
                 .unwrap_err()
                 .to_string(),
             "invalid cbor array length"
         );
         assert_eq!(
-            Part::from_cbor(&[0x86, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6])
+            Fragment::from_cbor(&[0x86, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6])
                 .unwrap_err()
                 .to_string(),
             "invalid cbor array length"
         );
         // the first item must be an unsigned integer
         assert_eq!(
-            Part::from_cbor(&[0x85, 0x41, 0x1, 0x2, 0x3, 0x4, 0x41, 0x1])
+            Fragment::from_cbor(&[0x85, 0x41, 0x1, 0x2, 0x3, 0x4, 0x41, 0x1])
                 .unwrap_err()
                 .to_string(),
             "unexpected item at position 0"
         );
         // the second item must be an unsigned integer
         assert_eq!(
-            Part::from_cbor(&[0x85, 0x1, 0x41, 0x2, 0x3, 0x4, 0x41, 0x1])
+            Fragment::from_cbor(&[0x85, 0x1, 0x41, 0x2, 0x3, 0x4, 0x41, 0x1])
                 .unwrap_err()
                 .to_string(),
             "unexpected item at position 1"
         );
         // the third item must be an unsigned integer
         assert_eq!(
-            Part::from_cbor(&[0x85, 0x1, 0x2, 0x41, 0x3, 0x4, 0x41, 0x1])
+            Fragment::from_cbor(&[0x85, 0x1, 0x2, 0x41, 0x3, 0x4, 0x41, 0x1])
                 .unwrap_err()
                 .to_string(),
             "unexpected item at position 2"
         );
         // the fourth item must be an unsigned integer
         assert_eq!(
-            Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x41, 0x4, 0x41, 0x1])
+            Fragment::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x41, 0x4, 0x41, 0x1])
                 .unwrap_err()
                 .to_string(),
             "unexpected item at position 3"
         );
         // the fifth item must be byte string
         assert_eq!(
-            Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x4, 0x5])
+            Fragment::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x4, 0x5])
                 .unwrap_err()
                 .to_string(),
             "unexpected item at position 4"
         );
-        Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x4, 0x41, 0x5]).unwrap();
+        Fragment::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x4, 0x41, 0x5]).unwrap();
     }
 
     #[test]
-    fn test_part_from_cbor_unsigned_types() {
+    fn test_fragment_from_cbor_unsigned_types() {
         // u8
-        Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x4, 0x41, 0x5]).unwrap();
+        Fragment::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x4, 0x41, 0x5]).unwrap();
         // u16
-        Part::from_cbor(&[
+        Fragment::from_cbor(&[
             0x85, 0x19, 0x1, 0x2, 0x19, 0x3, 0x4, 0x19, 0x5, 0x6, 0x19, 0x7, 0x8, 0x41, 0x5,
         ])
         .unwrap();
         // u32
-        Part::from_cbor(&[
+        Fragment::from_cbor(&[
             0x85, 0x1a, 0x1, 0x2, 0x3, 0x4, 0x1a, 0x5, 0x6, 0x7, 0x8, 0x1a, 0x9, 0x10, 0x11, 0x12,
             0x1a, 0x13, 0x14, 0x15, 0x16, 0x41, 0x5,
         ])
         .unwrap();
         // u64
         assert_eq!(
-            Part::from_cbor(&[
+            Fragment::from_cbor(&[
                 0x85, 0x1b, 0x1, 0x2, 0x3, 0x4, 0xa, 0xb, 0xc, 0xd, 0x1a, 0x5, 0x6, 0x7, 0x8, 0x1a,
                 0x9, 0x10, 0x11, 0x12, 0x1a, 0x13, 0x14, 0x15, 0x16, 0x41, 0x5,
             ])
@@ -770,7 +775,7 @@ mod tests {
             "unexpected item at position 0"
         );
         assert_eq!(
-            Part::from_cbor(&[
+            Fragment::from_cbor(&[
                 0x85, 0x1a, 0x1, 0x2, 0x3, 0x4, 0x1b, 0x5, 0x6, 0x7, 0x8, 0xa, 0xb, 0xc, 0xd, 0x1a,
                 0x9, 0x10, 0x11, 0x12, 0x1a, 0x13, 0x14, 0x15, 0x16, 0x41, 0x5,
             ])
@@ -779,7 +784,7 @@ mod tests {
             "unexpected item at position 1"
         );
         assert_eq!(
-            Part::from_cbor(&[
+            Fragment::from_cbor(&[
                 0x85, 0x1a, 0x1, 0x2, 0x3, 0x4, 0x1a, 0x5, 0x6, 0x7, 0x8, 0x1b, 0x9, 0x10, 0x11,
                 0x12, 0xa, 0xb, 0xc, 0xd, 0x1a, 0x13, 0x14, 0x15, 0x16, 0x41, 0x5,
             ])
@@ -788,7 +793,7 @@ mod tests {
             "unexpected item at position 2"
         );
         assert_eq!(
-            Part::from_cbor(&[
+            Fragment::from_cbor(&[
                 0x85, 0x1a, 0x1, 0x2, 0x3, 0x4, 0x1a, 0x5, 0x6, 0x7, 0x8, 0x1a, 0x9, 0x10, 0x11,
                 0x12, 0x1b, 0x13, 0x14, 0x15, 0x16, 0xa, 0xb, 0xc, 0xd, 0x41, 0x5,
             ])

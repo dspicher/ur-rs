@@ -7,8 +7,8 @@ fn main() {
             let mut encoder = ur::Encoder::new(data, max_length, "bytes").unwrap();
             let mut decoder = ur::Decoder::default();
             for _ in 0..encoder.fragment_count() {
-                let part = encoder.next_part().unwrap();
-                decoder.receive(&part).unwrap();
+                let fragment = encoder.next_fragment().unwrap();
+                decoder.receive(&fragment).unwrap();
             }
             assert_eq!(decoder.message().unwrap(), data);
         });

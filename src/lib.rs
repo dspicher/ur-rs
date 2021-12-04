@@ -21,10 +21,10 @@
 //! let data = String::from("Ten chars!").repeat(10);
 //! let max_length = 5;
 //! let mut encoder = ur::Encoder::new(data.as_bytes(), max_length, "bytes").unwrap();
-//! let part = encoder.next_part().unwrap();
-//! assert_eq!(part, "ur:bytes/1-20/lpadbbcsiecyvdidatkpfeghihjtcxiabdfevlms");
-//! let part = encoder.next_part().unwrap();
-//! assert_eq!(part, "ur:bytes/2-20/lpaobbcsiecyvdidatkpfeishsjpjkclwewffhad");
+//! let fragment = encoder.next_fragment().unwrap();
+//! assert_eq!(fragment, "ur:bytes/1-20/lpadbbcsiecyvdidatkpfeghihjtcxiabdfevlms");
+//! let fragment = encoder.next_fragment().unwrap();
+//! assert_eq!(fragment, "ur:bytes/2-20/lpaobbcsiecyvdidatkpfeishsjpjkclwewffhad");
 //! ```
 //!
 //! ### Emit a stream of URs that can be recombined into the payload
@@ -38,10 +38,10 @@
 //! let mut encoder = ur::Encoder::new(data.as_bytes(), max_length, "bytes").unwrap();
 //! let mut decoder = ur::Decoder::default();
 //! while !decoder.complete() {
-//!     let part = encoder.next_part().unwrap();
+//!     let fragment = encoder.next_fragment().unwrap();
 //!     // Simulate some communication loss
 //!     if encoder.current_index() & 1 > 0 {
-//!         decoder.receive(&part).unwrap();
+//!         decoder.receive(&fragment).unwrap();
 //!     }
 //! }
 //! assert_eq!(decoder.message().unwrap(), data.as_bytes());

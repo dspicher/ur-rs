@@ -29,12 +29,12 @@ impl Encoder {
         })
     }
 
-    pub fn next_part(&mut self) -> anyhow::Result<String> {
-        let part = self.fountain.next_part()?;
-        let body = crate::bytewords::encode(&part.cbor()?, &crate::bytewords::Style::Minimal)?;
+    pub fn next_fragment(&mut self) -> anyhow::Result<String> {
+        let fragment = self.fountain.next_fragment()?;
+        let body = crate::bytewords::encode(&fragment.cbor()?, &crate::bytewords::Style::Minimal)?;
         Ok(Self::encode_ur(&[
             self.ur_type.clone(),
-            part.sequence_id(),
+            fragment.sequence_id(),
             body,
         ]))
     }
@@ -59,10 +59,10 @@ impl Decoder {
     pub fn decode(value: &str) -> anyhow::Result<Vec<u8>> {
         match value.strip_prefix("ur:") {
             Some(v) => {
-                let mut parts = v.rsplit('/');
+                let mut fragments = v.rsplit('/');
                 // rsplit will always return at least one item
-                let payload = parts.next().unwrap();
-                match parts.count() {
+                let payload = fragments.next().unwrap();
+                match fragments.count() {
                     0 => Err(anyhow::anyhow!("No type specified")),
                     1 | 2 => Ok(crate::bytewords::decode(
                         payload,
@@ -78,7 +78,7 @@ impl Decoder {
     pub fn receive(&mut self, value: &str) -> anyhow::Result<()> {
         let decoded = Self::decode(value)?;
         self.fountain
-            .receive(crate::fountain::Part::from_cbor(decoded.as_slice())?)?;
+            .receive(crate::fountain::Fragment::from_cbor(decoded.as_slice())?)?;
         Ok(())
     }
 
@@ -104,7 +104,7 @@ mod tests {
     }
 
     #[test]
-    fn test_single_part_ur() {
+    fn test_single_fragment_ur() {
         let ur = make_message_ur(50, "Wolf");
         let encoded = Encoder::encode(&ur, "bytes").unwrap();
         let expected = "ur:bytes/hdeymejtswhhylkepmykhhtsytsnoyoyaxaedsuttydmmhhpktpmsrjtgwdpfnsboxgwlbaawzuefywkdplrsrjynbvygabwjldapfcsdwkbrkch";
@@ -142,7 +142,7 @@ mod tests {
         assert_eq!(encoder.fragment_count(), 9);
         for (index, e) in expected.into_iter().enumerate() {
             assert_eq!(encoder.current_index(), index);
-            assert_eq!(encoder.next_part().unwrap(), e);
+            assert_eq!(encoder.next_fragment().unwrap(), e);
         }
     }
 
@@ -185,12 +185,12 @@ mod tests {
     }
 
     #[test]
-    fn test_multipart_ur() {
+    fn test_multifragment_ur() {
         let ur = make_message_ur(32767, "Wolf");
         let mut encoder = Encoder::new(&ur, 1000, "bytes").unwrap();
         let mut decoder = Decoder::default();
         while !decoder.complete() {
-            decoder.receive(&encoder.next_part().unwrap()).unwrap();
+            decoder.receive(&encoder.next_fragment().unwrap()).unwrap();
         }
         assert_eq!(decoder.message().unwrap(), ur);
     }
