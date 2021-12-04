@@ -527,8 +527,10 @@ mod tests {
 
     #[test]
     fn test_fountain_encoder_cbor() {
-        let message = crate::xoshiro::test_utils::make_message("Wolf", 256);
-        let mut encoder = Encoder::new(&message, 30).unwrap();
+        let max_fragment_length = 30;
+        let size = 256;
+        let message = crate::xoshiro::test_utils::make_message("Wolf", size);
+        let mut encoder = Encoder::new(&message, max_fragment_length).unwrap();
         let expected_parts = vec![
             "8501091901001a0167aa07581d916ec65cf77cadf55cd7f9cda1a1030026ddd42e905b77adc36e4f2d3c",
             "8502091901001a0167aa07581dcba44f7f04f2de44f42d84c374a0e149136f25b01852545961d55f7f7a",
@@ -551,6 +553,7 @@ mod tests {
             "8513091901001a0167aa07581d3171c5dc365766eff25ae47c6f10e7de48cfb8474e050e5fe997a6dc24",
             "8514091901001a0167aa07581de055c2433562184fa71b4be94f262e200f01c6f74c284b0dc6fae6673f",
         ];
+        assert_eq!(encoder.fragment_count(), size / max_fragment_length + 1);
         for e in expected_parts {
             assert_eq!(hex::encode(encoder.next_part().unwrap().cbor().unwrap()), e);
         }
