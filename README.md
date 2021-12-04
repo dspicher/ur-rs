@@ -4,12 +4,14 @@ Rust Uniform Resources
 [<img alt="build status" src="https://img.shields.io/codecov/c/gh/dspicher/ur-rs?logo=codecov" height="20">](https://codecov.io/gh/dspicher/ur-rs)
 [<img alt="build status" src="https://img.shields.io/crates/v/ur.svg" height="20">](https://crates.io/crates/ur)
 
+<!-- cargo-rdme start -->
+
 `ur` is a crate to interact with ["uniform resource"](https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-005-ur.md) encodings of binary data.
 The encoding scheme is optimized for transport in URIs and QR codes.
 
 ### Encode binary data
-The [`crate::bytewords`] module defines multiple encoding styles. The minimal
-style, demonstrated below, encodes each byte into two characters.
+The [`crate::bytewords`](https://docs.rs/ur/latest/ur/bytewords/) module defines multiple encoding styles.
+The minimal style, demonstrated below, encodes each byte into two characters.
 ```rust
 use ur::bytewords::{decode, encode, Style};
 let data = "Some binary data".as_bytes();
@@ -52,6 +54,8 @@ while !decoder.complete() {
 }
 assert_eq!(decoder.message().unwrap(), data.as_bytes());
 ```
+
+<!-- cargo-rdme end -->
 
 ## Uniform Resources
 [Uniform Resources](https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-005-ur.md) are

@@ -1,9 +1,9 @@
 //! `ur` is a crate to interact with ["uniform resource"](https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-005-ur.md) encodings of binary data.
 //! The encoding scheme is optimized for transport in URIs and QR codes.
 //!
-//! ## Encode binary data
-//! The [`crate::bytewords`] module defines multiple encoding styles. The minimal
-//! style, demonstrated below, encodes each byte into two characters.
+//! ### Encode binary data
+//! The [`crate::bytewords`](crate::bytewords) module defines multiple encoding styles.
+//! The minimal style, demonstrated below, encodes each byte into two characters.
 //! ```
 //! use ur::bytewords::{decode, encode, Style};
 //! let data = "Some binary data".as_bytes();
@@ -13,7 +13,7 @@
 //! assert_eq!(data, decoded);
 //! ```
 //!
-//! ## Split up payloads into uniform resource URIs
+//! ### Split up payloads into uniform resource URIs
 //! The encoder splits up payloads into chunks and encodes them into URIs.
 //! The payload part of the URI contains additional information necessary for
 //! decoding, as well as a checksum.
@@ -27,7 +27,7 @@
 //! assert_eq!(part, "ur:bytes/2-20/lpaobbcsiecyvdidatkpfeishsjpjkclwewffhad");
 //! ```
 //!
-//! ## Emit a stream of URs that can be recombined into the payload
+//! ### Emit a stream of URs that can be recombined into the payload
 //! Finally, those URIs can be consumed by a decoder to restore the original
 //! payload. The receiver can start to receive at any time and miss arbitrary
 //! transmissions. This is useful for example in the context of an animated
