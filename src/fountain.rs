@@ -217,7 +217,6 @@ impl Decoder {
         if !combined
             .get(self.message_length..)
             .ok_or_else(|| anyhow::anyhow!("expected item"))?
-            .to_vec()
             .iter()
             .all(|&x| x == 0)
         {
