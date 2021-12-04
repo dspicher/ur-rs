@@ -646,6 +646,26 @@ mod tests {
     }
 
     #[test]
+    fn test_decoder_part_validation() {
+        let mut encoder = Encoder::new("foo".as_bytes(), 2).unwrap();
+        let mut decoder = Decoder::default();
+        let mut part = encoder.next_part().unwrap();
+        assert!(decoder.receive(part.clone()).unwrap());
+        assert!(decoder.validate(&part));
+        part.checksum += 1;
+        assert!(!decoder.validate(&part));
+        part.checksum -= 1;
+        part.message_length += 1;
+        assert!(!decoder.validate(&part));
+        part.message_length -= 1;
+        part.sequence_count += 1;
+        assert!(!decoder.validate(&part));
+        part.sequence_count -= 1;
+        part.data.push(1);
+        assert!(!decoder.validate(&part));
+    }
+
+    #[test]
     fn test_fountain_cbor() {
         let part = Part {
             sequence: 12,
