@@ -9,13 +9,11 @@ pub struct Weighted {
 impl Weighted {
     pub fn new(mut weights: Vec<f64>) -> anyhow::Result<Self> {
         if weights.iter().any(|&p| p < 0.0) {
-            return Err(anyhow::anyhow!("negative probability encountered"));
+            anyhow::bail!("negative probability encountered")
         }
         let summed = weights.iter().sum::<f64>();
         if summed <= 0.0 {
-            return Err(anyhow::anyhow!(
-                "probabilities don't sum to a positive value"
-            ));
+            anyhow::bail!("probabilities don't sum to a positive value")
         }
         let count = weights.len();
         for w in &mut weights {
