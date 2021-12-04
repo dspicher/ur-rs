@@ -202,7 +202,7 @@ impl Decoder {
 
     pub fn message(&self) -> anyhow::Result<Vec<u8>> {
         if !self.complete() {
-            return Err(anyhow::anyhow!("not yet complete"));
+            anyhow::bail!("not yet complete");
         }
         let combined = (0..self.sequence_count)
             .map(|idx| {
@@ -220,7 +220,7 @@ impl Decoder {
             .iter()
             .all(|&x| x == 0)
         {
-            return Err(anyhow::anyhow!("invalid padding detected"));
+            anyhow::bail!("invalid padding detected")
         }
         Ok(combined
             .get(..self.message_length)
