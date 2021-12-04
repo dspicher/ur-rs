@@ -76,8 +76,13 @@ impl Decoder {
         if self.complete() {
             return Ok(false);
         }
-        if !self.validate(&part) {
-            return Ok(false);
+        if self.received.is_empty() {
+            self.sequence_count = part.sequence_count;
+            self.message_length = part.message_length;
+            self.checksum = part.checksum;
+            self.fragment_length = part.data.len();
+        } else if !self.validate(&part) {
+            anyhow::bail!("part is inconsistent with previous ones")
         }
         let indexes = part.indexes()?;
         if self.received.contains(&indexes) {
@@ -178,25 +183,19 @@ impl Decoder {
         self.message_length != 0 && self.decoded.len() == self.sequence_count
     }
 
-    pub fn validate(&mut self, part: &Part) -> bool {
-        if self.received.is_empty() {
-            self.sequence_count = part.sequence_count;
-            self.message_length = part.message_length;
-            self.checksum = part.checksum;
-            self.fragment_length = part.data.len();
-        } else {
-            if part.sequence_count != self.sequence_count {
-                return false;
-            }
-            if part.message_length != self.message_length {
-                return false;
-            }
-            if part.checksum != self.checksum {
-                return false;
-            }
-            if part.data.len() != self.fragment_length {
-                return false;
-            }
+    #[must_use]
+    pub fn validate(&self, part: &Part) -> bool {
+        if part.sequence_count != self.sequence_count {
+            return false;
+        }
+        if part.message_length != self.message_length {
+            return false;
+        }
+        if part.checksum != self.checksum {
+            return false;
+        }
+        if part.data.len() != self.fragment_length {
+            return false;
         }
         true
     }
@@ -633,7 +632,10 @@ mod tests {
         // non-valid
         let mut part = encoder.next_part().unwrap();
         part.checksum += 1;
-        assert!(!decoder.receive(part).unwrap());
+        assert_eq!(
+            decoder.receive(part).unwrap_err().to_string(),
+            "part is inconsistent with previous ones"
+        );
         // decoder complete
         while !decoder.complete() {
             let part = encoder.next_part().unwrap();
