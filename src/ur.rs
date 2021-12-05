@@ -1,23 +1,23 @@
+pub fn encode<T: Into<String>>(data: &[u8], ur_type: T) -> String {
+    let body = crate::bytewords::encode(data, &crate::bytewords::Style::Minimal);
+    encode_ur(&[ur_type.into(), body])
+}
+
+#[must_use]
+fn encode_ur(items: &[String]) -> String {
+    encode_uri("ur", items)
+}
+
+fn encode_uri(scheme: &str, items: &[String]) -> String {
+    format!("{}:{}", scheme, items.join("/"))
+}
+
 pub struct Encoder {
     fountain: crate::fountain::Encoder,
     ur_type: String,
 }
 
 impl Encoder {
-    pub fn encode<T: Into<String>>(data: &[u8], ur_type: T) -> String {
-        let body = crate::bytewords::encode(data, &crate::bytewords::Style::Minimal);
-        Self::encode_ur(&[ur_type.into(), body])
-    }
-
-    #[must_use]
-    fn encode_ur(items: &[String]) -> String {
-        Self::encode_uri("ur", items)
-    }
-
-    fn encode_uri(scheme: &str, items: &[String]) -> String {
-        format!("{}:{}", scheme, items.join("/"))
-    }
-
     pub fn new<T: Into<String>>(
         message: &[u8],
         max_fragment_length: usize,
@@ -32,11 +32,7 @@ impl Encoder {
     pub fn next_part(&mut self) -> anyhow::Result<String> {
         let part = self.fountain.next_part()?;
         let body = crate::bytewords::encode(&part.cbor()?, &crate::bytewords::Style::Minimal);
-        Ok(Self::encode_ur(&[
-            self.ur_type.clone(),
-            part.sequence_id(),
-            body,
-        ]))
+        Ok(encode_ur(&[self.ur_type.clone(), part.sequence_id(), body]))
     }
 
     #[must_use]
@@ -106,7 +102,7 @@ mod tests {
     #[test]
     fn test_single_part_ur() {
         let ur = make_message_ur(50, "Wolf");
-        let encoded = Encoder::encode(&ur, "bytes");
+        let encoded = encode(&ur, "bytes");
         let expected = "ur:bytes/hdeymejtswhhylkepmykhhtsytsnoyoyaxaedsuttydmmhhpktpmsrjtgwdpfnsboxgwlbaawzuefywkdplrsrjynbvygabwjldapfcsdwkbrkch";
         assert_eq!(encoded, expected);
         let decoded = Decoder::decode(&encoded).unwrap();
@@ -175,7 +171,7 @@ mod tests {
 
         let data = serde_cbor::to_vec(&top_level).unwrap();
 
-        let e = Encoder::encode(&data, "crypto-request");
+        let e = encode(&data, "crypto-request");
         let expected = "ur:crypto-request/oeadtpdagdaobncpftlnylfgfgmuztihbawfsgrtflaotaadwkoyadtaaohdhdcxvsdkfgkepezepefrrffmbnnbmdvahnptrdtpbtuyimmemweootjshsmhlunyeslnameyhsdi";
         assert_eq!(expected, e);
 
