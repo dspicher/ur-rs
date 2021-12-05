@@ -1,18 +1,56 @@
+//! The `bytewords` module contains functions for working with the [`bytewords`](https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-012-bytewords.md) encoding
+//! scheme. [`encode`] encodes an arbitrary byte payload into one of three `bytewords` style
+//! encodings. [`decode`] takes an encoded string and recovers the data payload.
+//!
+//! ```
+//! use ur::bytewords::{decode, encode, Style};
+//! let data = "Some binary data".as_bytes();
+//! let encoded = encode(data, &Style::Minimal);
+//! assert_eq!(encoded, "gujljnihcxidinjthsjpkkcxiehsjyhsnsgdmkht");
+//! let decoded = decode(&encoded, &Style::Minimal).unwrap();
+//! assert_eq!(data, decoded);
+//! ```
+
+/// The three different `bytewords` encoding styles. See the [`encode`] documentation for examples.
 #[derive(PartialEq)]
 pub enum Style {
+    /// Four-letter words, separated by spaces
     Standard,
+    /// Four-letter words, separated by dashes
     Uri,
+    /// Two-letter words, concatenated without separators
     Minimal,
 }
 
+/// The two different errors that can be returned when decoding.
 #[derive(Debug, PartialEq, thiserror::Error)]
 pub enum Error {
+    /// Usually indicates a wrong encoding [`Style`] was passed.
     #[error("invalid word")]
     InvalidWord,
+    /// The CRC32 checksum doesn't validate.
     #[error("invalid checksum")]
     InvalidChecksum,
 }
 
+/// Deocdes a `bytewords`-encoded String back into a byte payload. The encoding
+/// must contain a four-byte checksum.
+///
+/// # Examples
+///
+/// ```
+/// use ur::bytewords::{decode, Style};
+/// assert_eq!(decode("able tied also webs lung", &Style::Standard).unwrap(), vec![0]);
+/// assert_eq!(decode("able-tied-also-webs-lung", &Style::Uri).unwrap(), vec![0]);
+/// // Notice how the minimal encoding consists of the start and end letters of the bytewords
+/// assert_eq!(decode("aetdaowslg", &Style::Minimal).unwrap(), vec![0]);
+/// ```
+///
+/// # Errors
+///
+/// If the encoded string contains unrecognized words, is inconsistent with
+/// the provided `style`, or contains an invalid checksum, an error will be
+/// returned.
 pub fn decode(encoded: &str, style: &Style) -> Result<Vec<u8>, Error> {
     let separator = match style {
         Style::Standard => " ",
@@ -55,6 +93,17 @@ fn strip_checksum(data: &[u8]) -> Result<Vec<u8>, Error> {
     }
 }
 
+/// Encodes a byte payload into a `bytewords` encoded String.
+///
+/// # Examples
+///
+/// ```
+/// use ur::bytewords::{encode, Style};
+/// assert_eq!(encode(&[0], &Style::Standard), "able tied also webs lung");
+/// assert_eq!(encode(&[0], &Style::Uri), "able-tied-also-webs-lung");
+/// // Notice how the minimal encoding consists of the start and end letters of the bytewords
+/// assert_eq!(encode(&[0], &Style::Minimal), "aetdaowslg");
+/// ```
 #[must_use]
 pub fn encode(data: &[u8], style: &Style) -> String {
     let checksum = crate::crc32().checksum(data).to_be_bytes();
