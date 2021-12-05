@@ -55,7 +55,8 @@ fn strip_checksum(data: &[u8]) -> Result<Vec<u8>, Error> {
     }
 }
 
-pub fn encode(data: &[u8], style: &Style) -> anyhow::Result<String> {
+#[must_use]
+pub fn encode(data: &[u8], style: &Style) -> String {
     let checksum = crate::crc32().checksum(data).to_be_bytes();
     let data = data.iter().chain(checksum.iter());
     let words: Vec<&str> = match style {
@@ -71,7 +72,7 @@ pub fn encode(data: &[u8], style: &Style) -> anyhow::Result<String> {
         Style::Uri => "-",
         Style::Minimal => "",
     };
-    Ok(words.join(separator))
+    words.join(separator)
 }
 
 #[cfg(test)]
@@ -88,17 +89,14 @@ mod tests {
     fn test_bytewords() {
         let input = vec![0, 1, 2, 128, 255];
         assert_eq!(
-            encode(&input, &Style::Standard).unwrap(),
+            encode(&input, &Style::Standard),
             "able acid also lava zoom jade need echo taxi"
         );
         assert_eq!(
-            encode(&input, &Style::Uri).unwrap(),
+            encode(&input, &Style::Uri),
             "able-acid-also-lava-zoom-jade-need-echo-taxi"
         );
-        assert_eq!(
-            encode(&input, &Style::Minimal).unwrap(),
-            "aeadaolazmjendeoti"
-        );
+        assert_eq!(encode(&input, &Style::Minimal), "aeadaolazmjendeoti");
 
         assert_eq!(
             decode(
@@ -118,7 +116,7 @@ mod tests {
         );
 
         // empty payload is allowed
-        decode(&encode(&[], &Style::Minimal).unwrap(), &Style::Minimal).unwrap();
+        decode(&encode(&[], &Style::Minimal), &Style::Minimal).unwrap();
 
         // bad checksum
         assert_eq!(
@@ -184,7 +182,7 @@ mod tests {
             decode(encoded_minimal, &Style::Minimal).unwrap(),
             input.to_vec()
         );
-        assert_eq!(encode(&input, &Style::Standard).unwrap(), encoded);
-        assert_eq!(encode(&input, &Style::Minimal).unwrap(), encoded_minimal);
+        assert_eq!(encode(&input, &Style::Standard), encoded);
+        assert_eq!(encode(&input, &Style::Minimal), encoded_minimal);
     }
 }

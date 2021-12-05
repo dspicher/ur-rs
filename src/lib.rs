@@ -7,7 +7,7 @@
 //! ```
 //! use ur::bytewords::{decode, encode, Style};
 //! let data = "Some binary data".as_bytes();
-//! let encoded = encode(data, &Style::Minimal).unwrap();
+//! let encoded = encode(data, &Style::Minimal);
 //! assert_eq!(encoded, "gujljnihcxidinjthsjpkkcxiehsjyhsnsgdmkht");
 //! let decoded = decode(&encoded, &Style::Minimal).unwrap();
 //! assert_eq!(data, decoded);
