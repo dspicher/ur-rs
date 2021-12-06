@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub struct Weighted {
+pub(crate) struct Weighted {
     aliases: Vec<u32>,
     probs: Vec<f64>,
 }
@@ -7,7 +7,7 @@ pub struct Weighted {
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_precision_loss)]
 impl Weighted {
-    pub fn new(mut weights: Vec<f64>) -> anyhow::Result<Self> {
+    pub(crate) fn new(mut weights: Vec<f64>) -> anyhow::Result<Self> {
         if weights.iter().any(|&p| p < 0.0) {
             anyhow::bail!("negative probability encountered")
         }
@@ -53,15 +53,15 @@ impl Weighted {
     }
 
     #[allow(clippy::cast_sign_loss)]
-    pub fn next(&mut self, xoshiro: &mut crate::xoshiro::Xoshiro256) -> anyhow::Result<u32> {
+    pub(crate) fn next(&mut self, xoshiro: &mut crate::xoshiro::Xoshiro256) -> u32 {
         let r1 = xoshiro.next_double();
         let r2 = xoshiro.next_double();
         let n = self.probs.len();
         let i = (n as f64 * r1) as usize;
         if r2 < *self.probs.get(i).unwrap() {
-            Ok(i as u32)
+            i as u32
         } else {
-            Ok(*self.aliases.get(i).unwrap())
+            *self.aliases.get(i).unwrap()
         }
     }
 }
@@ -97,7 +97,7 @@ mod tests {
             3, 3, 3, 0, 3, 3, 2,
         ];
         for e in expected_samples {
-            assert_eq!(sampler.next(&mut xoshiro).unwrap(), e);
+            assert_eq!(sampler.next(&mut xoshiro), e);
         }
     }
 
