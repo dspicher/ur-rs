@@ -32,20 +32,20 @@ impl Encoder {
         self.current_sequence
     }
 
-    pub fn next_part(&mut self) -> anyhow::Result<Part> {
+    pub fn next_part(&mut self) -> Part {
         self.current_sequence += 1;
-        let indexes = choose_fragments(self.current_sequence, self.parts.len(), self.checksum)?;
+        let indexes = choose_fragments(self.current_sequence, self.parts.len(), self.checksum);
         let init = vec![0; self.parts.get(0).unwrap().len()];
         let mixed = indexes.into_iter().fold(init, |acc, item| {
             xor(acc.as_slice(), self.parts.get(item).unwrap())
         });
-        Ok(Part {
+        Part {
             sequence: self.current_sequence,
             sequence_count: self.parts.len(),
             message_length: self.message_length,
             checksum: self.checksum,
             data: mixed,
-        })
+        }
     }
 
     #[must_use]
@@ -84,12 +84,12 @@ impl Decoder {
         } else if !self.validate(&part) {
             anyhow::bail!("part is inconsistent with previous ones")
         }
-        let indexes = part.indexes()?;
+        let indexes = part.indexes();
         if self.received.contains(&indexes) {
             return Ok(false);
         }
         self.received.insert(indexes);
-        if part.is_simple()? {
+        if part.is_simple() {
             self.process_simple(part)?;
         } else {
             self.process_complex(part)?;
@@ -99,7 +99,7 @@ impl Decoder {
 
     fn process_simple(&mut self, part: Part) -> anyhow::Result<()> {
         let index = *part
-            .indexes()?
+            .indexes()
             .get(0)
             .ok_or_else(|| anyhow::anyhow!("expected item"))?;
         self.decoded.insert(index, part.clone());
@@ -145,7 +145,7 @@ impl Decoder {
     }
 
     fn process_complex(&mut self, mut part: Part) -> anyhow::Result<()> {
-        let mut indexes = part.indexes()?;
+        let mut indexes = part.indexes();
         let to_remove: Vec<usize> = indexes
             .clone()
             .into_iter()
@@ -324,12 +324,12 @@ impl Part {
         Ok(serde_cbor::from_slice(cbor)?)
     }
 
-    fn indexes(&self) -> anyhow::Result<Vec<usize>> {
+    fn indexes(&self) -> Vec<usize> {
         choose_fragments(self.sequence, self.sequence_count, self.checksum)
     }
 
-    fn is_simple(&self) -> anyhow::Result<bool> {
-        Ok(self.indexes()?.len() == 1)
+    fn is_simple(&self) -> bool {
+        self.indexes().len() == 1
     }
 
     pub(crate) fn cbor(&self) -> anyhow::Result<Vec<u8>> {
@@ -367,23 +367,20 @@ pub fn join(data: Vec<Vec<u8>>, message_length: usize) -> anyhow::Result<Vec<u8>
     Ok(flattened)
 }
 
-fn choose_fragments(
-    sequence: usize,
-    fragment_count: usize,
-    checksum: u32,
-) -> anyhow::Result<Vec<usize>> {
+#[must_use]
+fn choose_fragments(sequence: usize, fragment_count: usize, checksum: u32) -> Vec<usize> {
     if sequence <= fragment_count {
-        return Ok(vec![sequence - 1]);
+        return vec![sequence - 1];
     }
     #[allow(clippy::cast_possible_truncation)]
     let mut seed: Vec<u8> = (sequence as u32).to_be_bytes().to_vec();
     seed.extend((checksum as u32).to_be_bytes().to_vec());
     let mut xoshiro = crate::xoshiro::Xoshiro256::from(seed.as_slice());
-    let degree = xoshiro.choose_degree(fragment_count)?;
+    let degree = xoshiro.choose_degree(fragment_count);
     let indexes = (0..fragment_count).collect();
     let mut shuffled = xoshiro.shuffled(indexes);
     shuffled.truncate(degree as usize);
-    Ok(shuffled)
+    shuffled
 }
 
 #[must_use]
@@ -469,8 +466,7 @@ mod tests {
             vec![7],
         ];
         for seq_num in 1..=30 {
-            let mut indexes =
-                crate::fountain::choose_fragments(seq_num, fragments.len(), checksum).unwrap();
+            let mut indexes = crate::fountain::choose_fragments(seq_num, fragments.len(), checksum);
             indexes.sort_unstable();
             assert_eq!(
                 indexes,
@@ -519,7 +515,7 @@ mod tests {
         ];
         for (sequence, e) in expected_parts.into_iter().enumerate() {
             assert_eq!(encoder.current_sequence(), sequence);
-            assert_eq!(encoder.next_part().unwrap().to_string(), e);
+            assert_eq!(encoder.next_part().to_string(), e);
         }
     }
 
@@ -553,7 +549,7 @@ mod tests {
         ];
         assert_eq!(encoder.fragment_count(), size / max_fragment_length + 1);
         for e in expected_parts {
-            assert_eq!(hex::encode(encoder.next_part().unwrap().cbor().unwrap()), e);
+            assert_eq!(hex::encode(encoder.next_part().cbor().unwrap()), e);
         }
     }
 
@@ -570,7 +566,7 @@ mod tests {
         let message = crate::xoshiro::test_utils::make_message("Wolf", 256);
         let mut encoder = Encoder::new(&message, 30).unwrap();
         for _ in 0..encoder.parts.len() {
-            encoder.next_part().unwrap();
+            encoder.next_part();
         }
         assert!(encoder.complete());
     }
@@ -585,7 +581,7 @@ mod tests {
         let mut encoder = Encoder::new(&message, max_fragment_length).unwrap();
         let mut decoder = Decoder::default();
         while !decoder.complete() {
-            let part = encoder.next_part().unwrap();
+            let part = encoder.next_part();
             let _next = decoder.receive(part);
         }
         assert_eq!(decoder.message().unwrap(), message);
@@ -607,7 +603,7 @@ mod tests {
         let mut decoder = Decoder::default();
         let mut skip = false;
         while !decoder.complete() {
-            let part = encoder.next_part().unwrap();
+            let part = encoder.next_part();
             if !skip {
                 let _next = decoder.receive(part);
             }
@@ -625,12 +621,12 @@ mod tests {
         let message = crate::xoshiro::test_utils::make_message(seed, message_size);
         let mut encoder = Encoder::new(&message, max_fragment_length).unwrap();
         let mut decoder = Decoder::default();
-        let part = encoder.next_part().unwrap();
+        let part = encoder.next_part();
         assert!(decoder.receive(part.clone()).unwrap());
         // same indexes
         assert!(!decoder.receive(part).unwrap());
         // non-valid
-        let mut part = encoder.next_part().unwrap();
+        let mut part = encoder.next_part();
         part.checksum += 1;
         assert_eq!(
             decoder.receive(part).unwrap_err().to_string(),
@@ -638,10 +634,10 @@ mod tests {
         );
         // decoder complete
         while !decoder.complete() {
-            let part = encoder.next_part().unwrap();
+            let part = encoder.next_part();
             decoder.receive(part).unwrap();
         }
-        let part = encoder.next_part().unwrap();
+        let part = encoder.next_part();
         assert!(!decoder.receive(part).unwrap());
     }
 
@@ -649,7 +645,7 @@ mod tests {
     fn test_decoder_part_validation() {
         let mut encoder = Encoder::new("foo".as_bytes(), 2).unwrap();
         let mut decoder = Decoder::default();
-        let mut part = encoder.next_part().unwrap();
+        let mut part = encoder.next_part();
         assert!(decoder.receive(part.clone()).unwrap());
         assert!(decoder.validate(&part));
         part.checksum += 1;
