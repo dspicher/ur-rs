@@ -7,14 +7,13 @@ pub(crate) struct Weighted {
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_precision_loss)]
 impl Weighted {
-    pub(crate) fn new(mut weights: Vec<f64>) -> anyhow::Result<Self> {
-        if weights.iter().any(|&p| p < 0.0) {
-            anyhow::bail!("negative probability encountered")
-        }
+    pub(crate) fn new(mut weights: Vec<f64>) -> Self {
+        assert!(
+            !weights.iter().any(|&p| p < 0.0),
+            "negative probability encountered"
+        );
         let summed = weights.iter().sum::<f64>();
-        if summed <= 0.0 {
-            anyhow::bail!("probabilities don't sum to a positive value")
-        }
+        assert!(summed > 0.0, "probabilities don't sum to a positive value");
         let count = weights.len();
         for w in &mut weights {
             *w *= count as f64 / summed;
@@ -49,7 +48,7 @@ impl Weighted {
             *probs.get_mut(a).unwrap() = 1.0;
         }
 
-        Ok(Self { aliases, probs })
+        Self { aliases, probs }
     }
 
     #[allow(clippy::cast_sign_loss)]
@@ -74,7 +73,7 @@ mod tests {
     fn test_sampler() {
         let weights = vec![1.0, 2.0, 4.0, 8.0];
         let mut xoshiro = crate::xoshiro::Xoshiro256::from("Wolf");
-        let mut sampler = Weighted::new(weights).unwrap();
+        let mut sampler = Weighted::new(weights);
 
         let expected_samples = vec![
             3, 3, 3, 3, 3, 3, 3, 0, 2, 3, 3, 3, 3, 1, 2, 2, 1, 3, 3, 2, 3, 3, 1, 1, 2, 1, 1, 3, 1,
@@ -119,21 +118,21 @@ mod tests {
         for nonce in 1..=200 {
             let mut xoshiro = crate::xoshiro::Xoshiro256::from(format!("Wolf-{}", nonce).as_str());
             assert_eq!(
-                xoshiro.choose_degree(fragments.len()).unwrap(),
+                xoshiro.choose_degree(fragments.len()),
                 *expected_degrees.get(nonce - 1).unwrap()
             );
         }
     }
 
     #[test]
-    fn test_weight_errors() {
-        assert_eq!(
-            Weighted::new(vec![2.0, -1.0]).unwrap_err().to_string(),
-            "negative probability encountered"
-        );
-        assert_eq!(
-            Weighted::new(vec![0.0]).unwrap_err().to_string(),
-            "probabilities don't sum to a positive value"
-        );
+    #[should_panic(expected = "negative probability encountered")]
+    fn test_negative_weights() {
+        Weighted::new(vec![2.0, -1.0]);
+    }
+
+    #[test]
+    #[should_panic(expected = "probabilities don't sum to a positive value")]
+    fn test_zero_weights() {
+        Weighted::new(vec![0.0]);
     }
 }

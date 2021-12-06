@@ -30,7 +30,7 @@ impl Encoder {
     }
 
     pub fn next_part(&mut self) -> anyhow::Result<String> {
-        let part = self.fountain.next_part()?;
+        let part = self.fountain.next_part();
         let body = crate::bytewords::encode(&part.cbor()?, &crate::bytewords::Style::Minimal);
         Ok(encode_ur(&[self.ur_type.clone(), part.sequence_id(), body]))
     }
