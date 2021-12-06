@@ -97,7 +97,7 @@ impl Decoder {
         Ok(true)
     }
 
-    pub fn process_simple(&mut self, part: Part) -> anyhow::Result<()> {
+    fn process_simple(&mut self, part: Part) -> anyhow::Result<()> {
         let index = *part
             .indexes()?
             .get(0)
@@ -108,7 +108,7 @@ impl Decoder {
         Ok(())
     }
 
-    pub fn process_queue(&mut self) -> anyhow::Result<()> {
+    fn process_queue(&mut self) -> anyhow::Result<()> {
         while !self.queue.is_empty() {
             let (index, simple) = self
                 .queue
@@ -144,7 +144,7 @@ impl Decoder {
         Ok(())
     }
 
-    pub fn process_complex(&mut self, mut part: Part) -> anyhow::Result<()> {
+    fn process_complex(&mut self, mut part: Part) -> anyhow::Result<()> {
         let mut indexes = part.indexes()?;
         let to_remove: Vec<usize> = indexes
             .clone()
@@ -320,24 +320,24 @@ impl std::fmt::Display for Part {
 }
 
 impl Part {
-    pub fn from_cbor(cbor: &[u8]) -> anyhow::Result<Self> {
+    pub(crate) fn from_cbor(cbor: &[u8]) -> anyhow::Result<Self> {
         Ok(serde_cbor::from_slice(cbor)?)
     }
 
-    pub fn indexes(&self) -> anyhow::Result<Vec<usize>> {
+    fn indexes(&self) -> anyhow::Result<Vec<usize>> {
         choose_fragments(self.sequence, self.sequence_count, self.checksum)
     }
 
-    pub fn is_simple(&self) -> anyhow::Result<bool> {
+    fn is_simple(&self) -> anyhow::Result<bool> {
         Ok(self.indexes()?.len() == 1)
     }
 
-    pub fn cbor(&self) -> anyhow::Result<Vec<u8>> {
+    pub(crate) fn cbor(&self) -> anyhow::Result<Vec<u8>> {
         Ok(serde_cbor::to_vec(self)?)
     }
 
     #[must_use]
-    pub fn sequence_id(&self) -> String {
+    pub(crate) fn sequence_id(&self) -> String {
         format!("{}-{}", self.sequence, self.sequence_count)
     }
 }
@@ -346,13 +346,13 @@ impl Part {
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_precision_loss)]
 #[allow(clippy::cast_sign_loss)]
-pub fn fragment_length(data_length: usize, max_fragment_length: usize) -> usize {
+pub(crate) fn fragment_length(data_length: usize, max_fragment_length: usize) -> usize {
     let fragment_count = data_length / max_fragment_length + 1;
     (data_length as f64 / fragment_count as f64).ceil() as usize
 }
 
 #[must_use]
-pub fn partition(mut data: Vec<u8>, fragment_length: usize) -> Vec<Vec<u8>> {
+pub(crate) fn partition(mut data: Vec<u8>, fragment_length: usize) -> Vec<Vec<u8>> {
     let mut padding = vec![0; (fragment_length - (data.len() % fragment_length)) % fragment_length];
     data.append(&mut padding);
     data.chunks(fragment_length).map(|c| c.to_vec()).collect()
@@ -367,7 +367,7 @@ pub fn join(data: Vec<Vec<u8>>, message_length: usize) -> anyhow::Result<Vec<u8>
     Ok(flattened)
 }
 
-pub fn choose_fragments(
+fn choose_fragments(
     sequence: usize,
     fragment_count: usize,
     checksum: u32,
@@ -387,7 +387,7 @@ pub fn choose_fragments(
 }
 
 #[must_use]
-pub fn xor(v1: &[u8], v2: &[u8]) -> Vec<u8> {
+fn xor(v1: &[u8], v2: &[u8]) -> Vec<u8> {
     v1.iter().zip(v2.iter()).map(|(&x1, &x2)| x1 ^ x2).collect()
 }
 
