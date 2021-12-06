@@ -38,19 +38,6 @@ impl Xoshiro256 {
         (self.next_double() * ((high - low + 1) as f64)) as u64 + low
     }
 
-    pub fn next_byte(&mut self) -> u8 {
-        self.next_int(0, 255) as u8
-    }
-
-    pub fn next_bytes(&mut self, n: usize) -> Vec<u8> {
-        (0..n).map(|_| self.next_byte()).collect()
-    }
-
-    #[must_use]
-    pub fn from_crc(bytes: &[u8]) -> Self {
-        Self::from(&crate::crc32().checksum(bytes).to_be_bytes()[..])
-    }
-
     pub fn shuffled<T>(&mut self, mut items: Vec<T>) -> Vec<T> {
         let mut shuffled = Vec::<T>::with_capacity(items.len());
         while !items.is_empty() {
@@ -96,6 +83,22 @@ impl From<[u8; 32]> for Xoshiro256 {
 #[cfg(test)]
 pub mod test_utils {
     use super::*;
+
+    impl super::Xoshiro256 {
+        #[allow(clippy::cast_possible_truncation)]
+        fn next_byte(&mut self) -> u8 {
+            self.next_int(0, 255) as u8
+        }
+
+        pub fn next_bytes(&mut self, n: usize) -> Vec<u8> {
+            (0..n).map(|_| self.next_byte()).collect()
+        }
+
+        #[must_use]
+        pub fn from_crc(bytes: &[u8]) -> Self {
+            Self::from(&crate::crc32().checksum(bytes).to_be_bytes()[..])
+        }
+    }
 
     #[must_use]
     pub fn make_message(seed: &str, size: usize) -> Vec<u8> {
