@@ -358,15 +358,6 @@ pub(crate) fn partition(mut data: Vec<u8>, fragment_length: usize) -> Vec<Vec<u8
     data.chunks(fragment_length).map(|c| c.to_vec()).collect()
 }
 
-pub fn join(data: Vec<Vec<u8>>, message_length: usize) -> anyhow::Result<Vec<u8>> {
-    if data.iter().map(Vec::len).sum::<usize>() < message_length {
-        anyhow::bail!("insufficient data");
-    }
-    let mut flattened: Vec<u8> = data.into_iter().flatten().collect();
-    flattened.truncate(message_length);
-    Ok(flattened)
-}
-
 #[must_use]
 fn choose_fragments(sequence: usize, fragment_count: usize, checksum: u32) -> Vec<usize> {
     if sequence <= fragment_count {
@@ -400,6 +391,12 @@ mod tests {
 
     #[test]
     fn test_partition_and_join() {
+        let join = |data: Vec<Vec<u8>>, message_length: usize| {
+            let mut flattened: Vec<u8> = data.into_iter().flatten().collect();
+            flattened.truncate(message_length);
+            flattened
+        };
+
         let message = crate::xoshiro::test_utils::make_message("Wolf", 1024);
         let fragment_length = fragment_length(message.len(), 100);
         let fragments = partition(message.clone(), fragment_length);
@@ -423,7 +420,7 @@ mod tests {
                 *expected_fragments.get(i).unwrap()
             );
         }
-        let rejoined = join(fragments, message.len()).unwrap();
+        let rejoined = join(fragments, message.len());
         assert_eq!(rejoined, message);
     }
 
