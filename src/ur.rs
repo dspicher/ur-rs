@@ -46,33 +46,33 @@ impl Encoder {
     }
 }
 
+fn decode(value: &str) -> anyhow::Result<Vec<u8>> {
+    match value.strip_prefix("ur:") {
+        Some(v) => {
+            let mut parts = v.rsplit('/');
+            // rsplit will always return at least one item
+            let payload = parts.next().unwrap();
+            match parts.count() {
+                0 => Err(anyhow::anyhow!("No type specified")),
+                1 | 2 => Ok(crate::bytewords::decode(
+                    payload,
+                    &crate::bytewords::Style::Minimal,
+                )?),
+                _ => Err(anyhow::anyhow!("Invalid encoding: too many separators '/'")),
+            }
+        }
+        None => Err(anyhow::anyhow!("Invalid Scheme")),
+    }
+}
+
 #[derive(Default)]
 pub struct Decoder {
     fountain: crate::fountain::Decoder,
 }
 
 impl Decoder {
-    pub fn decode(value: &str) -> anyhow::Result<Vec<u8>> {
-        match value.strip_prefix("ur:") {
-            Some(v) => {
-                let mut parts = v.rsplit('/');
-                // rsplit will always return at least one item
-                let payload = parts.next().unwrap();
-                match parts.count() {
-                    0 => Err(anyhow::anyhow!("No type specified")),
-                    1 | 2 => Ok(crate::bytewords::decode(
-                        payload,
-                        &crate::bytewords::Style::Minimal,
-                    )?),
-                    _ => Err(anyhow::anyhow!("Invalid encoding: too many separators '/'")),
-                }
-            }
-            None => Err(anyhow::anyhow!("Invalid Scheme")),
-        }
-    }
-
     pub fn receive(&mut self, value: &str) -> anyhow::Result<()> {
-        let decoded = Self::decode(value)?;
+        let decoded = decode(value)?;
         self.fountain
             .receive(crate::fountain::Part::from_cbor(decoded.as_slice())?)?;
         Ok(())
@@ -105,7 +105,7 @@ mod tests {
         let encoded = encode(&ur, "bytes");
         let expected = "ur:bytes/hdeymejtswhhylkepmykhhtsytsnoyoyaxaedsuttydmmhhpktpmsrjtgwdpfnsboxgwlbaawzuefywkdplrsrjynbvygabwjldapfcsdwkbrkch";
         assert_eq!(encoded, expected);
-        let decoded = Decoder::decode(&encoded).unwrap();
+        let decoded = decode(&encoded).unwrap();
         assert_eq!(ur, decoded);
     }
 
@@ -176,7 +176,7 @@ mod tests {
         assert_eq!(expected, e);
 
         // Decoding should yield the same data
-        let d = Decoder::decode(e.as_str()).unwrap();
+        let d = decode(e.as_str()).unwrap();
         assert_eq!(data, d);
     }
 
@@ -194,24 +194,22 @@ mod tests {
     #[test]
     fn test_decoder() {
         assert_eq!(
-            Decoder::decode("uhr:bytes/aeadaolazmjendeoti")
+            decode("uhr:bytes/aeadaolazmjendeoti")
                 .unwrap_err()
                 .to_string(),
             "Invalid Scheme"
         );
         assert_eq!(
-            Decoder::decode("ur:aeadaolazmjendeoti")
-                .unwrap_err()
-                .to_string(),
+            decode("ur:aeadaolazmjendeoti").unwrap_err().to_string(),
             "No type specified"
         );
         assert_eq!(
-            Decoder::decode("ur:bytes/seq/toomuch/aeadaolazmjendeoti")
+            decode("ur:bytes/seq/toomuch/aeadaolazmjendeoti")
                 .unwrap_err()
                 .to_string(),
             "Invalid encoding: too many separators '/'"
         );
-        Decoder::decode("ur:bytes/aeadaolazmjendeoti").unwrap();
-        Decoder::decode("ur:whatever/aeadaolazmjendeoti").unwrap();
+        decode("ur:bytes/aeadaolazmjendeoti").unwrap();
+        decode("ur:whatever/aeadaolazmjendeoti").unwrap();
     }
 }
