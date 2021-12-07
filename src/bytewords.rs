@@ -1,14 +1,33 @@
-//! The `bytewords` module contains functions for working with the [`bytewords`](https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-012-bytewords.md) encoding
-//! scheme. [`encode`] encodes an arbitrary byte payload into one of three `bytewords` style
-//! encodings. [`decode`] takes an encoded string and recovers the data payload.
+//! Encode and decode byte payloads according to the [`bytewords`](https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-012-bytewords.md) scheme.
 //!
+//! The [`bytewords`](https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-012-bytewords.md) encoding
+//! scheme defines three styles how byte payloads can be encoded.
+//!
+//! # Standard style
+//! ```
+//! use ur::bytewords::{decode, encode, Style};
+//! let data = "Some bytes".as_bytes();
+//! let encoded = encode(data, &Style::Standard);
+//! assert_eq!(encoded, "guru jowl join inch crux iced kick jury inch junk taxi aqua kite limp");
+//! assert_eq!(data, decode(&encoded, &Style::Standard).unwrap());
+//! ```
+//!
+//! # URI style
+//! ```
+//! use ur::bytewords::{decode, encode, Style};
+//! let data = "Some bytes".as_bytes();
+//! let encoded = encode(data, &Style::Uri);
+//! assert_eq!(encoded, "guru-jowl-join-inch-crux-iced-kick-jury-inch-junk-taxi-aqua-kite-limp");
+//! assert_eq!(data, decode(&encoded, &Style::Uri).unwrap());
+//! ```
+//!
+//! # Minimal style
 //! ```
 //! use ur::bytewords::{decode, encode, Style};
 //! let data = "Some binary data".as_bytes();
 //! let encoded = encode(data, &Style::Minimal);
 //! assert_eq!(encoded, "gujljnihcxidinjthsjpkkcxiehsjyhsnsgdmkht");
-//! let decoded = decode(&encoded, &Style::Minimal).unwrap();
-//! assert_eq!(data, decoded);
+//! assert_eq!(data, decode(&encoded, &Style::Minimal).unwrap());
 //! ```
 
 /// The three different `bytewords` encoding styles. See the [`encode`] documentation for examples.

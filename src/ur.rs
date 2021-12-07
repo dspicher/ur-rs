@@ -1,8 +1,27 @@
+//! Split up big payloads into constantly sized URIs which can be recombined by a decoder.
+//!
 //! The `ur` module provides thin wrappers around fountain en- and decoders
 //! which turn these fountain parts into URIs. To this end the fountain part
 //! attributes (data, checksum, indexes being used, etc.) are combined with
 //! CBOR into a self-describing byte payload and encoded with the `bytewords`
 //! encoding into URIs suitable for web transport and QR codes.
+//! ```
+//! let data = String::from("Ten chars!").repeat(10);
+//! let max_length = 5;
+//! let scheme = "bytes";
+//! let mut encoder = ur::Encoder::new(data.as_bytes(), max_length, scheme).unwrap();
+//! let part = encoder.next_part().unwrap();
+//! assert_eq!(part, "ur:bytes/1-20/lpadbbcsiecyvdidatkpfeghihjtcxiabdfevlms");
+//! let mut decoder = ur::Decoder::default();
+//! while !decoder.complete() {
+//!     let part = encoder.next_part().unwrap();
+//!     // Simulate some communication loss
+//!     if encoder.current_index() & 1 > 0 {
+//!         decoder.receive(&part).unwrap();
+//!     }
+//! }
+//! assert_eq!(decoder.message().unwrap(), data.as_bytes());
+//! ```
 
 pub fn encode<T: Into<String>>(data: &[u8], ur_type: T) -> String {
     let body = crate::bytewords::encode(data, &crate::bytewords::Style::Minimal);
