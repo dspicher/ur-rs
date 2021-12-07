@@ -1,3 +1,28 @@
+//! The `fountain` module provides an implementation of a fountain encoder, which splits
+//! up a byte payload into multiple segments and emits an unbounded stream of parts which
+//! can be recombined at the receiving decoder site. The emitted parts are either original
+//! payload segments, or constructed by xor-ing a certain set of payload segments.
+//!
+//! A seeded `Xoshiro` RNG ensures that the receiver can reconstruct which segments
+//! were combined into the part.
+//! ```
+//! let xor = |a: &[u8], b: &[u8]| a.iter().zip(b.iter()).map(|(&x1, &x2)| x1 ^ x2).collect::<Vec<_>>();
+//!
+//! let data = String::from("Ten chars!");
+//! let max_length = 4;
+//! // note the padding
+//! let (p1, p2, p3) = ("Ten ".as_bytes(), "char".as_bytes(), "s!\u{0}\u{0}".as_bytes());
+//! let mut encoder = ur::fountain::Encoder::new(data.as_bytes(), max_length).unwrap();
+//! // the fountain encoder first emits all original segments in order
+//! assert_eq!(encoder.next_part().data(), p1);
+//! assert_eq!(encoder.next_part().data(), p2);
+//! assert_eq!(encoder.next_part().data(), p3);
+//! // the RNG then first selects the original third segment
+//! assert_eq!(encoder.next_part().data(), p3);
+//! // the RNG then selects all three segments to be xored
+//! assert_eq!(encoder.next_part().data(), xor(&xor(p1, p2), p3));
+//! ```
+
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_cbor::Value;
 
