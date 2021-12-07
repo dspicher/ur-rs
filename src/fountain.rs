@@ -342,6 +342,11 @@ impl Part {
     pub(crate) fn sequence_id(&self) -> String {
         format!("{}-{}", self.sequence, self.sequence_count)
     }
+
+    #[must_use]
+    pub fn data(&self) -> &[u8] {
+        &self.data
+    }
 }
 
 #[must_use]
