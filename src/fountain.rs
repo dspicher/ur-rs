@@ -324,11 +324,13 @@ impl Part {
         Ok(serde_cbor::from_slice(cbor)?)
     }
 
-    fn indexes(&self) -> Vec<usize> {
+    #[must_use]
+    pub fn indexes(&self) -> Vec<usize> {
         choose_fragments(self.sequence, self.sequence_count, self.checksum)
     }
 
-    fn is_simple(&self) -> bool {
+    #[must_use]
+    pub fn is_simple(&self) -> bool {
         self.indexes().len() == 1
     }
 
