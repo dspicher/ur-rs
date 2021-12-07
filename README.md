@@ -9,41 +9,17 @@ Rust Uniform Resources
 `ur` is a crate to interact with ["uniform resource"](https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-005-ur.md) encodings of binary data.
 The encoding scheme is optimized for transport in URIs and QR codes.
 
-### Encode binary data
-The [`crate::bytewords`](https://docs.rs/ur/latest/ur/bytewords/) module defines multiple encoding styles.
-The minimal style, demonstrated below, encodes each byte into two characters.
-```rust
-use ur::bytewords::{decode, encode, Style};
-let data = "Some binary data".as_bytes();
-let encoded = encode(data, &Style::Minimal);
-assert_eq!(encoded, "gujljnihcxidinjthsjpkkcxiehsjyhsnsgdmkht");
-let decoded = decode(&encoded, &Style::Minimal).unwrap();
-assert_eq!(data, decoded);
-```
-
-### Split up payloads into uniform resource URIs
-The encoder splits up payloads into chunks and encodes them into URIs.
-The payload part of the URI contains additional information necessary for
-decoding, as well as a checksum.
+The `ur::Encoder` allows a byte payload to be transmissioned in
+multiple stages, respecting maximum size requirements. Under the hood,
+a [`fountain`](https://en.wikipedia.org/wiki/Fountain_code) encoder is used to create an unbounded stream of URIs,
+subsets of which can be recombined at the receiving side into the payload:
 ```rust
 let data = String::from("Ten chars!").repeat(10);
 let max_length = 5;
-let mut encoder = ur::Encoder::new(data.as_bytes(), max_length, "bytes").unwrap();
+let scheme = "bytes";
+let mut encoder = ur::Encoder::new(data.as_bytes(), max_length, scheme).unwrap();
 let part = encoder.next_part().unwrap();
 assert_eq!(part, "ur:bytes/1-20/lpadbbcsiecyvdidatkpfeghihjtcxiabdfevlms");
-let part = encoder.next_part().unwrap();
-assert_eq!(part, "ur:bytes/2-20/lpaobbcsiecyvdidatkpfeishsjpjkclwewffhad");
-```
-
-### Emit a stream of URs that can be recombined into the payload
-Finally, those URIs can be consumed by a decoder to restore the original
-payload. The receiver can start to receive at any time and miss arbitrary
-transmissions. This is useful for example in the context of an animated
-QR code.
-```rust
-let data = String::from("Ten chars!").repeat(10);
-let max_length = 5;
-let mut encoder = ur::Encoder::new(data.as_bytes(), max_length, "bytes").unwrap();
 let mut decoder = ur::Decoder::default();
 while !decoder.complete() {
     let part = encoder.next_part().unwrap();
@@ -54,6 +30,15 @@ while !decoder.complete() {
 }
 assert_eq!(decoder.message().unwrap(), data.as_bytes());
 ```
+
+The following useful building blocks are also part of the public API:
+ - The [`crate::bytewords`](https://docs.rs/ur/latest/ur/bytewords/) module contains functionality
+   to encode byte payloads into a suitable alphabet, achieving hexadecimal
+   byte-per-character efficiency.
+ - The [`crate::fountain`](https://docs.rs/ur/latest/ur/fountain/) module provides an implementation
+   of a fountain encoder, which splits up a byte payload into multiple segments
+   and emits an unbounded stream of parts which can be recombined at the receiving
+   decoder side.
 
 <!-- cargo-rdme end -->
 

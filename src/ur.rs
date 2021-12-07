@@ -1,3 +1,9 @@
+//! The `ur` module provides thin wrappers around fountain en- and decoders
+//! which turn these fountain parts into URIs. To this end the fountain part
+//! attributes (data, checksum, indexes being used, etc.) are combined with
+//! CBOR into a self-describing byte payload and encoded with the `bytewords`
+//! encoding into URIs suitable for web transport and QR codes.
+
 pub fn encode<T: Into<String>>(data: &[u8], ur_type: T) -> String {
     let body = crate::bytewords::encode(data, &crate::bytewords::Style::Minimal);
     encode_ur(&[ur_type.into(), body])
