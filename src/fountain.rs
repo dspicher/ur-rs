@@ -389,7 +389,7 @@ pub(crate) fn fragment_length(data_length: usize, max_fragment_length: usize) ->
 pub(crate) fn partition(mut data: Vec<u8>, fragment_length: usize) -> Vec<Vec<u8>> {
     let mut padding = vec![0; (fragment_length - (data.len() % fragment_length)) % fragment_length];
     data.append(&mut padding);
-    data.chunks(fragment_length).map(|c| c.to_vec()).collect()
+    data.chunks(fragment_length).map(<[u8]>::to_vec).collect()
 }
 
 #[must_use]
