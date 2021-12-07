@@ -1,3 +1,5 @@
+//! Split up big payloads into constantly sized chunks which can be recombined by a decoder.
+//!
 //! The `fountain` module provides an implementation of a fountain encoder, which splits
 //! up a byte payload into multiple segments and emits an unbounded stream of parts which
 //! can be recombined at the receiving decoder site. The emitted parts are either original
