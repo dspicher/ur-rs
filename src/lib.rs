@@ -48,11 +48,11 @@
 //! ```
 
 pub mod bytewords;
-pub mod constants;
+pub(crate) mod constants;
 pub mod fountain;
-pub mod sampler;
+pub(crate) mod sampler;
 pub mod ur;
-pub mod xoshiro;
+pub(crate) mod xoshiro;
 
 pub use self::ur::Decoder;
 pub use self::ur::Encoder;
