@@ -58,7 +58,7 @@ ur = "0.1"
 ### Animated QR code
 To run this example, execute
 ```bash
-cargo run --example qr -- --payload "This is my super awesome UR payload"
+cargo run --example qr -- "This is my super awesome UR payload"
 ```
 which will print out URIs and QR codes transmitting the provided payload.
 
