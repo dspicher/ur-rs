@@ -42,6 +42,14 @@ The following useful building blocks are also part of the public API:
 
 <!-- cargo-rdme end -->
 
+## Usage
+
+Add `ur` to the dependencies of your `Cargo.toml`:
+```toml
+[dependencies]
+ur = "0.1"
+```
+
 ## Examples
 
 ### Animated QR code
@@ -51,7 +59,7 @@ cargo run --example qr -- --payload "This is my super awesome UR payload"
 ```
 which will print out URIs and QR codes transmitting the provided payload.
 
-## Uniform Resources
+## Background: Uniform Resources
 [Uniform Resources](https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-005-ur.md) are
 > a proposed method of encoding binary data of arbitrary content and length so that it is suitable for transport in either URIs or QR codes.
 
