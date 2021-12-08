@@ -14,20 +14,44 @@
 //! let max_length = 4;
 //! // note the padding
 //! let (p1, p2, p3) = ("Ten ".as_bytes(), "char".as_bytes(), "s!\u{0}\u{0}".as_bytes());
+//!
 //! let mut encoder = ur::fountain::Encoder::new(data.as_bytes(), max_length).unwrap();
+//! let mut decoder = ur::fountain::Decoder::default();
+//!
 //! // the fountain encoder first emits all original segments in order
-//! assert_eq!(encoder.next_part().data(), p1);
-//! assert_eq!(encoder.next_part().data(), p2);
+//! let part1 = encoder.next_part();
+//! assert_eq!(part1.data(), p1);
+//! // receive the first part into the decoder
+//! decoder.receive(part1).unwrap();
+//!
+//! let part2 = encoder.next_part();
+//! assert_eq!(part2.data(), p2);
+//! // receive the second part into the decoder
+//! decoder.receive(part2).unwrap();
+//!
+//! // miss the third part
 //! assert_eq!(encoder.next_part().data(), p3);
+//!
 //! // the RNG then first selects the original third segment
 //! assert_eq!(encoder.next_part().data(), p3);
+//!
 //! // the RNG then selects all three segments to be xored
-//! assert_eq!(encoder.next_part().data(), xor(&xor(p1, p2), p3));
+//! let xored = encoder.next_part();
+//! assert_eq!(xored.data(), xor(&xor(p1, p2), p3));
+//! // receive the xored part into the decoder
+//! // since it already has p1 and p2, p3 can be computed
+//! // from p1 xor p2 xor p3
+//! decoder.receive(xored).unwrap();
+//! assert!(decoder.complete());
+//! assert_eq!(decoder.message().unwrap(), data.as_bytes());
 //! ```
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_cbor::Value;
 
+/// An encoder capable of emitting fountain-encoded transmissions.
+///
+/// See the [`crate::fountain`] module documentation for an example.
 #[derive(Debug)]
 pub struct Encoder {
     parts: Vec<Vec<u8>>,
@@ -37,6 +61,28 @@ pub struct Encoder {
 }
 
 impl Encoder {
+    /// Constructs a new [`Encoder`], given a message and a maximum fragment length.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ur::fountain::Encoder;
+    /// let encoder = Encoder::new("binary data".as_bytes(), 4).unwrap();
+    /// ```
+    ///
+    /// Note that the effective fragment size will not always equal the maximum
+    /// fragment size:
+    ///
+    /// ```
+    /// use ur::fountain::Encoder;
+    /// let mut encoder = Encoder::new("data".as_bytes(), 3).unwrap();
+    /// assert_eq!(encoder.next_part().data().len(), 2);
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// If an empty message or a zero maximum fragment length is passed, an error
+    /// will be returned.
     pub fn new(message: &[u8], max_fragment_length: usize) -> anyhow::Result<Self> {
         if message.is_empty() {
             anyhow::bail!("expected non-empty message")
@@ -54,11 +100,30 @@ impl Encoder {
         })
     }
 
+    /// Returns the current count of how many parts have been emitted.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ur::fountain::Encoder;
+    /// let mut encoder = Encoder::new("data".as_bytes(), 3).unwrap();
+    /// assert_eq!(encoder.current_sequence(), 0);
+    /// encoder.next_part();
+    /// assert_eq!(encoder.current_sequence(), 1);
+    /// ```
     #[must_use]
     pub fn current_sequence(&self) -> usize {
         self.current_sequence
     }
 
+    /// Returns the next part to be emitted by the fountain encoder.
+    /// After all parts of the original message have been emitted once,
+    /// the fountain encoder will emit the result of xoring together the parts
+    /// selected by the Xoshiro RNG (which could be a single part).
+    ///
+    /// # Examples
+    ///
+    /// See the [`crate::fountain`] module documentation for an example.
     pub fn next_part(&mut self) -> Part {
         self.current_sequence += 1;
         let indexes = choose_fragments(self.current_sequence, self.parts.len(), self.checksum);
@@ -75,17 +140,48 @@ impl Encoder {
         }
     }
 
+    /// Returns the number of segments the original message has been split up.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ur::fountain::Encoder;
+    /// let mut encoder = Encoder::new("data".as_bytes(), 3).unwrap();
+    /// assert_eq!(encoder.fragment_count(), 2);
+    /// ```
     #[must_use]
     pub fn fragment_count(&self) -> usize {
         self.parts.len()
     }
 
+    /// Returns whether all original segments have been emitted at least once.
+    /// The fountain encoding is defined as doing this before combining segments
+    /// with each other. Thus, this is equivalent to checking whether
+    /// [`current_sequence`] >= [`fragment_count`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ur::fountain::Encoder;
+    /// let mut encoder = Encoder::new(&"data".as_bytes().repeat(10), 3).unwrap();
+    /// while !encoder.complete() {
+    ///     assert!(encoder.current_sequence() < encoder.fragment_count());
+    ///     encoder.next_part();
+    /// }
+    /// assert_eq!(encoder.current_sequence(), encoder.fragment_count());
+    /// ```
+    ///
+    /// [`fragment_count`]: Encoder::fragment_count
+    /// [`current_sequence`]: Encoder::current_sequence
     #[must_use]
     pub fn complete(&self) -> bool {
         self.current_sequence >= self.parts.len()
     }
 }
 
+/// A decoder capable of receiving and recombining fountain-encoded transmissions.
+///
+/// See the [`crate::fountain`] module documentation for an example.
 #[derive(Default)]
 pub struct Decoder {
     decoded: std::collections::HashMap<usize, Part>,
@@ -99,6 +195,18 @@ pub struct Decoder {
 }
 
 impl Decoder {
+    /// Receives a fountain-encoded part into the decoder.
+    ///
+    /// # Examples
+    ///
+    /// See the [`crate::fountain`] module documentation for an example.
+    ///
+    /// # Errors
+    ///
+    /// If the part would fail [`validate`] because it is inconsistent
+    /// with previously received parts, an error will be returned.
+    ///
+    /// [`validate`]: Decoder::validate
     pub fn receive(&mut self, part: Part) -> anyhow::Result<bool> {
         if self.complete() {
             return Ok(false);
@@ -205,11 +313,43 @@ impl Decoder {
         Ok(())
     }
 
+    /// Returns whether the decoder is complete and hence the message available.
+    ///
+    /// # Examples
+    ///
+    /// See the [`crate::fountain`] module documentation for an example.
     #[must_use]
     pub fn complete(&self) -> bool {
         self.message_length != 0 && self.decoded.len() == self.sequence_count
     }
 
+    /// Checks whether a [`Part`] is receivable by the decoder.
+    /// This can fail if other parts were previously received whose
+    /// metadata (such as number of segments) is inconsistent with the
+    /// present [`Part`]. Note that a fresh decoder will always return
+    /// false here.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ur::fountain::{Decoder, Encoder};
+    /// let mut decoder = Decoder::default();
+    /// let mut encoder = Encoder::new(&"data".as_bytes(), 3).unwrap();
+    /// let part = encoder.next_part();
+    ///
+    /// // a fresh decoder always returns false
+    /// assert!(!decoder.validate(&part));
+    ///
+    /// // parts with the same metadata validate successfully
+    /// decoder.receive(part).unwrap();
+    /// let part = encoder.next_part();
+    /// assert!(decoder.validate(&part));
+    ///
+    /// // parts with the different metadata don't validate
+    /// let mut encoder = Encoder::new(&"more data".as_bytes(), 3).unwrap();
+    /// let part = encoder.next_part();
+    /// assert!(!decoder.validate(&part));
+    /// ```
     #[must_use]
     pub fn validate(&self, part: &Part) -> bool {
         if part.sequence_count != self.sequence_count {
@@ -227,6 +367,18 @@ impl Decoder {
         true
     }
 
+    /// If [`complete`], returns the decoded message.
+    ///
+    /// # Errors
+    ///
+    /// If the message is not completely decoded yet or an inconsisten
+    /// internal state detected, an error will be returned.
+    ///
+    /// # Examples
+    ///
+    /// See the [`crate::fountain`] module documentation for an example.
+    ///
+    /// [`complete`]: Decoder::complete
     pub fn message(&self) -> anyhow::Result<Vec<u8>> {
         if !self.complete() {
             anyhow::bail!("not yet complete");
@@ -255,6 +407,11 @@ impl Decoder {
     }
 }
 
+/// A part emitted by a fountain [`Encoder`].
+///
+/// Most commonly, this is obtained by calling [`next_part`] on the encoder.
+///
+/// [`next_part`]: Encoder::next_part
 #[derive(Clone, Debug)]
 pub struct Part {
     sequence: usize,
@@ -351,11 +508,40 @@ impl Part {
         Ok(serde_cbor::from_slice(cbor)?)
     }
 
+    /// Returns the indexes of the message segments that were combined into this part.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use ur::fountain::Encoder;
+    /// let mut encoder = Encoder::new(&"data".as_bytes(), 3).unwrap();
+    /// assert_eq!(encoder.next_part().indexes(), vec![0]);
+    /// assert_eq!(encoder.next_part().indexes(), vec![1]);
+    /// ```
     #[must_use]
     pub fn indexes(&self) -> Vec<usize> {
         choose_fragments(self.sequence, self.sequence_count, self.checksum)
     }
 
+    /// Indicates whether this part is an original segment of the message, or was obtained by
+    /// combining multiple segments via xor.
+    ///
+    /// # Examples
+    ///
+    /// The encoding setup follows the `fountain` module example.
+    ///
+    /// ```
+    /// use ur::fountain::Encoder;
+    /// let mut encoder = Encoder::new(&"Ten chars!".as_bytes(), 4).unwrap();
+    /// // The encoder always emits the simple parts covering the message first
+    /// assert!(encoder.next_part().is_simple());
+    /// assert!(encoder.next_part().is_simple());
+    /// assert!(encoder.next_part().is_simple());
+    /// // The encoder then emits segment 3 again
+    /// assert!(encoder.next_part().is_simple());
+    /// // The encoder then emits all 3 segments combined
+    /// assert!(!encoder.next_part().is_simple());
+    /// ```
     #[must_use]
     pub fn is_simple(&self) -> bool {
         self.indexes().len() == 1
@@ -370,6 +556,18 @@ impl Part {
         format!("{}-{}", self.sequence, self.sequence_count)
     }
 
+    /// Returns a slice view onto the underlying data.
+    ///
+    /// Note that for non-simple parts this will be the result of
+    /// xoring multiple message segments together.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let data = String::from("Ten chars!");
+    /// let mut encoder = ur::fountain::Encoder::new(data.as_bytes(), 4).unwrap();
+    /// assert_eq!(encoder.next_part().data(), "Ten ".as_bytes());
+    /// ```
     #[must_use]
     pub fn data(&self) -> &[u8] {
         &self.data
