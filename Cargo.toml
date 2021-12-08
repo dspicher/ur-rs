@@ -16,7 +16,6 @@ once_cell = { version = "1.8.0" }
 rand_xoshiro = "0.6.0"
 serde = "1.0.130"
 serde_cbor = { version = "0.11.2", features = ["tags"] }
-thiserror = "1.0.30"
 
 [dev-dependencies]
 qrcode = { version = "0.12.0" }
