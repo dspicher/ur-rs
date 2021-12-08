@@ -87,6 +87,8 @@ use serde_cbor::Value;
 
 /// An encoder capable of emitting fountain-encoded transmissions.
 ///
+/// # Examples
+///
 /// See the [`crate::fountain`] module documentation for an example.
 #[derive(Debug)]
 pub struct Encoder {
@@ -176,7 +178,7 @@ impl Encoder {
         }
     }
 
-    /// Returns the number of segments the original message has been split up.
+    /// Returns the number of segments the original message has been split up into.
     ///
     /// # Examples
     ///
@@ -216,6 +218,8 @@ impl Encoder {
 }
 
 /// A decoder capable of receiving and recombining fountain-encoded transmissions.
+///
+/// # Examples
 ///
 /// See the [`crate::fountain`] module documentation for an example.
 #[derive(Default)]
