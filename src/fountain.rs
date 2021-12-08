@@ -45,6 +45,33 @@
 //! assert!(decoder.complete());
 //! assert_eq!(decoder.message().unwrap(), data.as_bytes());
 //! ```
+//!
+//! The index selection is biased towards combining fewer segments.
+//!
+//! ```
+//! let data = String::from("Fifty chars").repeat(5);
+//! let max_length = 5;
+//! let mut encoder = ur::fountain::Encoder::new(data.as_bytes(), max_length).unwrap();
+//! // 40% of the emitted parts represent original message segments
+//! assert_eq!(
+//!     (0..100)
+//!         .map(|_i| if encoder.next_part().is_simple() {
+//!             1
+//!         } else {
+//!             0
+//!         })
+//!         .sum::<usize>(),
+//!     39
+//! );
+//! let mut encoder = ur::fountain::Encoder::new(data.as_bytes(), max_length).unwrap();
+//! // On average, 3.33 segments (out of ten total) are combined into a part
+//! assert_eq!(
+//!     (0..100)
+//!         .map(|_i| encoder.next_part().indexes().len())
+//!         .sum::<usize>(),
+//!     333
+//! );
+//! ```
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_cbor::Value;
