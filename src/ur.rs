@@ -26,6 +26,16 @@
 //! assert_eq!(decoder.message().unwrap(), data.as_bytes());
 //! ```
 
+/// Encodes a data payload into a single URI
+///
+/// # Examples
+///
+/// ```
+/// assert_eq!(
+///     ur::ur::encode("data".as_bytes(), "bytes"),
+///     "ur:bytes/iehsjyhspmwfwfia"
+/// );
+/// ```
 pub fn encode<T: Into<String>>(data: &[u8], ur_type: T) -> String {
     let body = crate::bytewords::encode(data, &crate::bytewords::Style::Minimal);
     encode_ur(&[ur_type.into(), body])
@@ -36,12 +46,29 @@ fn encode_ur(items: &[String]) -> String {
     format!("{}:{}", "ur", items.join("/"))
 }
 
+/// A uniform resource encoder with an underlying fountain encoding.
+///
+/// # Examples
+///
+/// See the [`crate::ur`] module documentation for an example.
 pub struct Encoder {
     fountain: crate::fountain::Encoder,
     ur_type: String,
 }
 
 impl Encoder {
+    /// Creates a new [`Encoder`] for given a message payload.
+    ///
+    /// The emitted fountain parts will respect the maximum fragment length argument.
+    ///
+    /// # Examples
+    ///
+    /// See the [`crate::ur`] module documentation for an example.
+    ///
+    /// # Errors
+    ///
+    /// If an empty message or a zero maximum fragment length is passed, an error
+    /// will be returned.
     pub fn new<T: Into<String>>(
         message: &[u8],
         max_fragment_length: usize,
@@ -53,17 +80,44 @@ impl Encoder {
         })
     }
 
+    /// Returns the URI corresponding to next fountain part.
+    ///
+    /// # Examples
+    ///
+    /// See the [`crate::ur`] module documentation for an example.
+    ///
+    /// # Errors
+    ///
+    /// If serialization fails an error will be returned.
     pub fn next_part(&mut self) -> anyhow::Result<String> {
         let part = self.fountain.next_part();
         let body = crate::bytewords::encode(&part.cbor()?, &crate::bytewords::Style::Minimal);
         Ok(encode_ur(&[self.ur_type.clone(), part.sequence_id(), body]))
     }
 
+    /// Returns the current count of already emitted parts.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut encoder = ur::Encoder::new("data".as_bytes(), 5, "bytes").unwrap();
+    /// assert_eq!(encoder.current_index(), 0);
+    /// encoder.next_part().unwrap();
+    /// assert_eq!(encoder.current_index(), 1);
+    /// ```
     #[must_use]
     pub fn current_index(&self) -> usize {
         self.fountain.current_sequence()
     }
 
+    /// Returns the number of segments the original message has been split up into.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut encoder = ur::Encoder::new("data".as_bytes(), 3, "bytes").unwrap();
+    /// assert_eq!(encoder.fragment_count(), 2);
+    /// ```
     #[must_use]
     pub fn fragment_count(&self) -> usize {
         self.fountain.fragment_count()
@@ -89,12 +143,33 @@ fn decode(value: &str) -> anyhow::Result<Vec<u8>> {
     }
 }
 
+/// A uniform resource decoder able to receive URIs that encode a fountain part.
+///
+/// # Examples
+///
+/// See the [`crate::ur`] module documentation for an example.
 #[derive(Default)]
 pub struct Decoder {
     fountain: crate::fountain::Decoder,
 }
 
 impl Decoder {
+    /// Receives a URI representing a CBOR and `bytewords`-encoded fountain part
+    /// into the decoder.
+    ///
+    /// # Examples
+    ///
+    /// See the [`crate::ur`] module documentation for an example.
+    ///
+    /// # Errors
+    ///
+    /// This function may error along all the necessary decoding steps:
+    ///  - The string may not be a well-formed URI according to the uniform resource scheme
+    ///  - The URI payload may not be a well-formed `bytewords` string
+    ///  - The decoded byte payload may not be valid CBOR
+    ///  - The CBOR-encoded fountain part may be inconsistent with previously received ones
+    ///
+    /// In all these cases, an error will be returned.
     pub fn receive(&mut self, value: &str) -> anyhow::Result<()> {
         let decoded = decode(value)?;
         self.fountain
@@ -102,11 +177,28 @@ impl Decoder {
         Ok(())
     }
 
+    /// Returns whether the decoder is complete and hence the message available.
+    ///
+    /// # Examples
+    ///
+    /// See the [`crate::ur`] module documentation for an example.
     #[must_use]
     pub fn complete(&self) -> bool {
         self.fountain.complete()
     }
 
+    /// If [`complete`], returns the decoded message.
+    ///
+    /// # Errors
+    ///
+    /// If the message is not completely decoded yet or an inconsisten
+    /// internal state detected, an error will be returned.
+    ///
+    /// # Examples
+    ///
+    /// See the [`crate::ur`] module documentation for an example.
+    ///
+    /// [`complete`]: Decoder::complete
     pub fn message(&self) -> anyhow::Result<Vec<u8>> {
         self.fountain.message()
     }
