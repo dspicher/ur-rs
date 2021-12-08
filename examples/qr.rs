@@ -1,17 +1,10 @@
 use qrcode::QrCode;
 
 use std::io::Write;
-use structopt::StructOpt;
-
-#[derive(StructOpt, Debug)]
-struct Opt {
-    #[structopt(short, long)]
-    payload: String,
-}
 
 fn main() {
-    let opt = Opt::from_args();
-    let mut encoder = ur::Encoder::new(opt.payload.as_bytes(), 5, "bytes").unwrap();
+    let mut encoder =
+        ur::Encoder::new(std::env::args().last().unwrap().as_bytes(), 5, "bytes").unwrap();
     let mut stdout = std::io::stdout();
     loop {
         let ur = encoder.next_part().unwrap();

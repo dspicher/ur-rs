@@ -19,4 +19,3 @@ serde_cbor = { version = "0.11.2", features = ["tags"] }
 
 [dev-dependencies]
 qrcode = { version = "0.12.0" }
-structopt = "0.3.25"
