@@ -48,15 +48,24 @@ pub enum Style {
 }
 
 /// The two different errors that can be returned when decoding.
-#[derive(Debug, PartialEq, thiserror::Error)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
     /// Usually indicates a wrong encoding [`Style`] was passed.
-    #[error("invalid word")]
     InvalidWord,
     /// The CRC32 checksum doesn't validate.
-    #[error("invalid checksum")]
     InvalidChecksum,
 }
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::InvalidWord => write!(f, "invalid word"),
+            Error::InvalidChecksum => write!(f, "invalid checksum"),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
 
 /// Deocdes a `bytewords`-encoded String back into a byte payload. The encoding
 /// must contain a four-byte checksum.
