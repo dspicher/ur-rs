@@ -8,7 +8,10 @@
 //! use ur::bytewords::{decode, encode, Style};
 //! let data = "Some bytes".as_bytes();
 //! let encoded = encode(data, &Style::Standard);
-//! assert_eq!(encoded, "guru jowl join inch crux iced kick jury inch junk taxi aqua kite limp");
+//! assert_eq!(
+//!     encoded,
+//!     "guru jowl join inch crux iced kick jury inch junk taxi aqua kite limp"
+//! );
 //! assert_eq!(data, decode(&encoded, &Style::Standard).unwrap());
 //! ```
 //!
@@ -17,7 +20,10 @@
 //! use ur::bytewords::{decode, encode, Style};
 //! let data = "Some bytes".as_bytes();
 //! let encoded = encode(data, &Style::Uri);
-//! assert_eq!(encoded, "guru-jowl-join-inch-crux-iced-kick-jury-inch-junk-taxi-aqua-kite-limp");
+//! assert_eq!(
+//!     encoded,
+//!     "guru-jowl-join-inch-crux-iced-kick-jury-inch-junk-taxi-aqua-kite-limp"
+//! );
 //! assert_eq!(data, decode(&encoded, &Style::Uri).unwrap());
 //! ```
 //!
@@ -59,8 +65,14 @@ pub enum Error {
 ///
 /// ```
 /// use ur::bytewords::{decode, Style};
-/// assert_eq!(decode("able tied also webs lung", &Style::Standard).unwrap(), vec![0]);
-/// assert_eq!(decode("able-tied-also-webs-lung", &Style::Uri).unwrap(), vec![0]);
+/// assert_eq!(
+///     decode("able tied also webs lung", &Style::Standard).unwrap(),
+///     vec![0]
+/// );
+/// assert_eq!(
+///     decode("able-tied-also-webs-lung", &Style::Uri).unwrap(),
+///     vec![0]
+/// );
 /// // Notice how the minimal encoding consists of the start and end letters of the bytewords
 /// assert_eq!(decode("aetdaowslg", &Style::Minimal).unwrap(), vec![0]);
 /// ```

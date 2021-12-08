@@ -8,12 +8,21 @@
 //! A seeded `Xoshiro` RNG ensures that the receiver can reconstruct which segments
 //! were combined into the part.
 //! ```
-//! let xor = |a: &[u8], b: &[u8]| a.iter().zip(b.iter()).map(|(&x1, &x2)| x1 ^ x2).collect::<Vec<_>>();
+//! let xor = |a: &[u8], b: &[u8]| {
+//!     a.iter()
+//!         .zip(b.iter())
+//!         .map(|(&x1, &x2)| x1 ^ x2)
+//!         .collect::<Vec<_>>()
+//! };
 //!
 //! let data = String::from("Ten chars!");
 //! let max_length = 4;
 //! // note the padding
-//! let (p1, p2, p3) = ("Ten ".as_bytes(), "char".as_bytes(), "s!\u{0}\u{0}".as_bytes());
+//! let (p1, p2, p3) = (
+//!     "Ten ".as_bytes(),
+//!     "char".as_bytes(),
+//!     "s!\u{0}\u{0}".as_bytes(),
+//! );
 //!
 //! let mut encoder = ur::fountain::Encoder::new(data.as_bytes(), max_length).unwrap();
 //! let mut decoder = ur::fountain::Decoder::default();

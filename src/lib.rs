@@ -11,7 +11,10 @@
 //! let scheme = "bytes";
 //! let mut encoder = ur::Encoder::new(data.as_bytes(), max_length, scheme).unwrap();
 //! let part = encoder.next_part().unwrap();
-//! assert_eq!(part, "ur:bytes/1-20/lpadbbcsiecyvdidatkpfeghihjtcxiabdfevlms");
+//! assert_eq!(
+//!     part,
+//!     "ur:bytes/1-20/lpadbbcsiecyvdidatkpfeghihjtcxiabdfevlms"
+//! );
 //! let mut decoder = ur::Decoder::default();
 //! while !decoder.complete() {
 //!     let part = encoder.next_part().unwrap();
