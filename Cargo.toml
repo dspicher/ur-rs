@@ -18,4 +18,4 @@ serde = "1.0.130"
 serde_cbor = { version = "0.11.2", features = ["tags"] }
 
 [dev-dependencies]
-qrcode = { version = "0.12.0" }
+qrcode = { version = "0.12.0", default-features = false }
