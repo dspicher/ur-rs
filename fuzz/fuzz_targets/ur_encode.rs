@@ -10,7 +10,7 @@ fn main() {
                 let part = encoder.next_part().unwrap();
                 decoder.receive(&part).unwrap();
             }
-            assert_eq!(decoder.message().unwrap(), data);
+            assert_eq!(decoder.message().unwrap().unwrap(), data);
         });
     }
 }
