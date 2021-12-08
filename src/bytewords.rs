@@ -102,7 +102,7 @@ fn decode_minimal(encoded: &str) -> Result<Vec<u8>, Error> {
 
 fn decode_from_index(
     keys: &mut dyn Iterator<Item = &str>,
-    indexes: &phf::Map<&'static str, u8>,
+    indexes: &std::collections::HashMap<&'static str, u8>,
 ) -> Result<Vec<u8>, Error> {
     strip_checksum(
         &keys
