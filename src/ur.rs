@@ -23,7 +23,7 @@
 //!         decoder.receive(&part).unwrap();
 //!     }
 //! }
-//! assert_eq!(decoder.message().unwrap(), data.as_bytes());
+//! assert_eq!(decoder.message().unwrap().as_deref(), Some(data.as_bytes()));
 //! ```
 
 /// Encodes a data payload into a single URI
@@ -187,19 +187,18 @@ impl Decoder {
         self.fountain.complete()
     }
 
-    /// If [`complete`], returns the decoded message.
+    /// If [`complete`], returns the decoded message, `None` otherwise.
     ///
     /// # Errors
     ///
-    /// If the message is not completely decoded yet or an inconsisten
-    /// internal state detected, an error will be returned.
+    /// If an inconsistent internal state detected, an error will be returned.
     ///
     /// # Examples
     ///
     /// See the [`crate::ur`] module documentation for an example.
     ///
     /// [`complete`]: Decoder::complete
-    pub fn message(&self) -> anyhow::Result<Vec<u8>> {
+    pub fn message(&self) -> anyhow::Result<Option<Vec<u8>>> {
         self.fountain.message()
     }
 }
@@ -302,9 +301,10 @@ mod tests {
         let mut encoder = Encoder::new(&ur, 1000, "bytes").unwrap();
         let mut decoder = Decoder::default();
         while !decoder.complete() {
+            assert_eq!(decoder.message().unwrap(), None);
             decoder.receive(&encoder.next_part().unwrap()).unwrap();
         }
-        assert_eq!(decoder.message().unwrap(), ur);
+        assert_eq!(decoder.message().unwrap(), Some(ur));
     }
 
     #[test]

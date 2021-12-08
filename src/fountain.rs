@@ -52,7 +52,7 @@
 //! // from p1 xor p2 xor p3
 //! decoder.receive(xored).unwrap();
 //! assert!(decoder.complete());
-//! assert_eq!(decoder.message().unwrap(), data.as_bytes());
+//! assert_eq!(decoder.message().unwrap().as_deref(), Some(data.as_bytes()));
 //! ```
 //!
 //! The index selection is biased towards combining fewer segments.
@@ -407,21 +407,20 @@ impl Decoder {
         true
     }
 
-    /// If [`complete`], returns the decoded message.
+    /// If [`complete`], returns the decoded message, `None` otherwise.
     ///
     /// # Errors
     ///
-    /// If the message is not completely decoded yet or an inconsisten
-    /// internal state detected, an error will be returned.
+    /// If an inconsistent internal state is detected, an error will be returned.
     ///
     /// # Examples
     ///
     /// See the [`crate::fountain`] module documentation for an example.
     ///
     /// [`complete`]: Decoder::complete
-    pub fn message(&self) -> anyhow::Result<Vec<u8>> {
+    pub fn message(&self) -> anyhow::Result<Option<Vec<u8>>> {
         if !self.complete() {
-            anyhow::bail!("not yet complete");
+            return Ok(None);
         }
         let combined = (0..self.sequence_count)
             .map(|idx| {
@@ -440,10 +439,12 @@ impl Decoder {
         {
             anyhow::bail!("invalid padding detected")
         }
-        Ok(combined
-            .get(..self.message_length)
-            .ok_or_else(|| anyhow::anyhow!("expected item"))?
-            .to_vec())
+        Ok(Some(
+            combined
+                .get(..self.message_length)
+                .ok_or_else(|| anyhow::anyhow!("expected item"))?
+                .to_vec(),
+        ))
     }
 }
 
@@ -850,10 +851,11 @@ mod tests {
         let mut encoder = Encoder::new(&message, max_fragment_length).unwrap();
         let mut decoder = Decoder::default();
         while !decoder.complete() {
+            assert_eq!(decoder.message().unwrap(), None);
             let part = encoder.next_part();
             let _next = decoder.receive(part);
         }
-        assert_eq!(decoder.message().unwrap(), message);
+        assert_eq!(decoder.message().unwrap(), Some(message));
     }
 
     #[test]
@@ -878,7 +880,7 @@ mod tests {
             }
             skip = !skip;
         }
-        assert_eq!(decoder.message().unwrap(), message);
+        assert_eq!(decoder.message().unwrap(), Some(message));
     }
 
     #[test]

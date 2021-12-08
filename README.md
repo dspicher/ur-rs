@@ -31,7 +31,7 @@ while !decoder.complete() {
         decoder.receive(&part).unwrap();
     }
 }
-assert_eq!(decoder.message().unwrap(), data.as_bytes());
+assert_eq!(decoder.message().unwrap().as_deref(), Some(data.as_bytes()));
 ```
 
 The following useful building blocks are also part of the public API:
