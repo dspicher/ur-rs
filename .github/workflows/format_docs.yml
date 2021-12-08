@@ -18,5 +18,4 @@ jobs:
           toolchain: nightly
           override: true
       - run: rustup component add rustfmt --toolchain nightly-x86_64-unknown-linux-gnu
-      - run: echo "format_code_in_doc_comments = true" > rustfmt.toml
-      - run: cargo fmt --check
+      - run: cargo fmt --check -- --config-path rustfmt.toml.nightly
