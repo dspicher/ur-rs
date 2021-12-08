@@ -26,6 +26,8 @@ jobs:
       run: cargo sort-ck
     - name: Check README is up-to-date
       run: cargo install cargo-rdme && cargo rdme --check
+    - name: Check
+      run: cargo check --locked
     - name: Clippy
       run: cargo clippy --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -D clippy::dbg-macro -D clippy::indexing-slicing -A clippy::missing-panics-doc
     - name: Build
@@ -37,4 +39,5 @@ jobs:
       run: |
         cargo fmt -- --check
         cargo sort-ck
+        cargo check --locked
         cargo clippy --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -D clippy::dbg-macro -D clippy::indexing-slicing -A clippy::missing-panics-doc
