@@ -1,7 +1,7 @@
 //! `ur` is a crate to interact with ["uniform resource"](https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-005-ur.md) encodings of binary data.
 //! The encoding scheme is optimized for transport in URIs and QR codes.
 //!
-//! The `ur::Encoder` allows a byte payload to be transmissioned in
+//! The [`ur::Encoder`] allows a byte payload to be transmissioned in
 //! multiple stages, respecting maximum size requirements. Under the hood,
 //! a [`fountain`](https://en.wikipedia.org/wiki/Fountain_code) encoder is used to create an unbounded stream of URIs,
 //! subsets of which can be recombined at the receiving side into the payload:
