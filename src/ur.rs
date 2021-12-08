@@ -30,11 +30,7 @@ pub fn encode<T: Into<String>>(data: &[u8], ur_type: T) -> String {
 
 #[must_use]
 fn encode_ur(items: &[String]) -> String {
-    encode_uri("ur", items)
-}
-
-fn encode_uri(scheme: &str, items: &[String]) -> String {
-    format!("{}:{}", scheme, items.join("/"))
+    format!("{}:{}", "ur", items.join("/"))
 }
 
 pub struct Encoder {
