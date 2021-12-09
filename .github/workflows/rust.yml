@@ -39,5 +39,5 @@ jobs:
       run: |
         cargo fmt -- --check
         cargo sort-ck
-        cargo check --locked
+        cargo check
         cargo clippy --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -D clippy::dbg-macro -D clippy::indexing-slicing -A clippy::missing-panics-doc
