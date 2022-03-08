@@ -9,7 +9,7 @@ repository = "https://github.com/dspicher/ur-rs/"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.55"
+anyhow = "1.0.56"
 bitcoin_hashes = "0.10.0"
 crc = "2.1.0"
 hex = "0.4.3"
