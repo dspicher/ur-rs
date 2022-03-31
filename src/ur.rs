@@ -124,7 +124,7 @@ impl Encoder {
     }
 }
 
-fn decode(value: &str) -> anyhow::Result<Vec<u8>> {
+pub fn decode(value: &str) -> anyhow::Result<Vec<u8>> {
     match value.strip_prefix("ur:") {
         Some(v) => {
             let mut parts = v.rsplit('/');
