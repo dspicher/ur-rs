@@ -124,7 +124,23 @@ impl Encoder {
     }
 }
 
-fn decode(value: &str) -> anyhow::Result<Vec<u8>> {
+/// Decodes a single URI into the data payload
+///
+/// # Examples
+///
+/// ```
+/// assert_eq!(
+///     ur::ur::decode("ur:bytes/iehsjyhspmwfwfia").unwrap(),
+///     "data".as_bytes()
+/// );
+/// ```
+///
+/// # Errors
+///
+/// This function errors for invalid inputs, for example
+/// an invalid scheme different from "ur" or an invalid number
+/// of "/" separators.
+pub fn decode(value: &str) -> anyhow::Result<Vec<u8>> {
     match value.strip_prefix("ur:") {
         Some(v) => {
             let mut parts = v.rsplit('/');
