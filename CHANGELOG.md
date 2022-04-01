@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
  - Added `ur::ur::decode` to the public API to decode a single `ur` URI.
+ - Added `ur::ur::encode` and `ur::ur::decode` to the root library path.
 
 ## [0.2.0] - 2021-12-08
  - The public API has been greatly restricted

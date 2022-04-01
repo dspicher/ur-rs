@@ -42,6 +42,8 @@ pub(crate) mod sampler;
 pub mod ur;
 pub(crate) mod xoshiro;
 
+pub use self::ur::decode;
+pub use self::ur::encode;
 pub use self::ur::Decoder;
 pub use self::ur::Encoder;
 
