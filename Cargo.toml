@@ -4,7 +4,7 @@ description = "A Rust implementation of Uniform Resources"
 license = "MIT"
 version = "0.2.0"
 authors = ["Dominik Spicher <dominikspicher@gmail.com>"]
-edition = "2018"
+edition = "2021"
 repository = "https://github.com/dspicher/ur-rs/"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
