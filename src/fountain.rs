@@ -462,6 +462,24 @@ pub struct Part {
     data: Vec<u8>,
 }
 
+impl Part {
+    pub fn new(
+        sequence: usize,
+        sequence_count: usize,
+        message_length: usize,
+        checksum: u32,
+        data: Vec<u8>,
+    ) -> Self {
+        Part {
+            sequence,
+            sequence_count,
+            message_length,
+            checksum,
+            data,
+        }
+    }
+}
+
 impl Serialize for Part {
     fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         #[allow(clippy::cast_possible_truncation)]

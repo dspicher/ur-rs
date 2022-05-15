@@ -159,6 +159,48 @@ pub fn decode(value: &str) -> anyhow::Result<Vec<u8>> {
     }
 }
 
+/// Parse a single URI
+///
+/// # Examples
+///
+/// ```
+/// assert_eq!(
+///     ur::ur::parse("ur:bytes/iehsjyhspmwfwfia").unwrap(),
+///     ("bytes".to_string(), vec!["iehsjyhspmwfwfia".to_string()])
+/// );
+/// ```
+///
+/// # Errors
+///
+/// This function errors for invalid inputs, for example
+/// an invalid scheme different from "ur" or an invalid number
+/// of "/" separators.
+pub fn parse(value: &str) -> anyhow::Result<(String, Vec<String>)> {
+    match value.strip_prefix("ur:") {
+        Some(v) => {
+            let mut parts = v.rsplit('/');
+            let payload = parts.next().unwrap();
+            match parts.clone().count() {
+                0 => Err(anyhow::anyhow!("No type specified")),
+                1 => {
+                    let t = parts.next().unwrap();
+                    Ok((t.to_string(), vec![payload.to_string()]))
+                }
+                2 => {
+                    let sequence = parts.next().unwrap();
+                    let t = parts.next().unwrap();
+                    Ok((
+                        t.to_string(),
+                        vec![sequence.to_string(), payload.to_string()],
+                    ))
+                }
+                _ => Err(anyhow::anyhow!("Invalid encoding: too many separators '/'")),
+            }
+        }
+        None => Err(anyhow::anyhow!("Invalid Scheme")),
+    }
+}
+
 /// A uniform resource decoder able to receive URIs that encode a fountain part.
 ///
 /// # Examples
@@ -167,9 +209,19 @@ pub fn decode(value: &str) -> anyhow::Result<Vec<u8>> {
 #[derive(Default)]
 pub struct Decoder {
     fountain: crate::fountain::Decoder,
+    ur_type: Option<String>,
 }
 
 impl Decoder {
+    fn validate_part(&mut self, ur_type: String) -> bool {
+        match &self.ur_type {
+            Some(v) => return v.eq(&ur_type),
+            None => {}
+        };
+        self.ur_type = Some(ur_type);
+        true
+    }
+
     /// Receives a URI representing a CBOR and `bytewords`-encoded fountain part
     /// into the decoder.
     ///
@@ -187,9 +239,25 @@ impl Decoder {
     ///
     /// In all these cases, an error will be returned.
     pub fn receive(&mut self, value: &str) -> anyhow::Result<()> {
-        let decoded = decode(value)?;
-        self.fountain
-            .receive(crate::fountain::Part::from_cbor(decoded.as_slice())?)?;
+        let lowercase = value.to_lowercase();
+
+        let (t, components) = parse(lowercase.as_str())?;
+
+        if !self.validate_part(t) {
+            return Err(anyhow::anyhow!("invalid Scheme, mismatched type"));
+        }
+
+        let payload = components.last().unwrap();
+        let decoded = crate::bytewords::decode(payload, &crate::bytewords::Style::Minimal)?;
+
+        let part = match components.len() {
+            1 => crate::fountain::Part::new(1, 1, decoded.len(), 0, decoded),
+            2 => crate::fountain::Part::from_cbor(decoded.as_slice())?,
+            _ => {
+                return Err(anyhow::anyhow!("invalid Scheme"));
+            }
+        };
+        self.fountain.receive(part)?;
         Ok(())
     }
 
@@ -343,5 +411,23 @@ mod tests {
         );
         decode("ur:bytes/aeadaolazmjendeoti").unwrap();
         decode("ur:whatever/aeadaolazmjendeoti").unwrap();
+    }
+
+    #[test]
+    fn test_parse() {
+        let result = parse("ur:crypto-request/oeadtpdagdaobncpftlnylfgfgmuztihbawfsgrtflaotaadwkoyadtaaohdhdcxvsdkfgkepezepefrrffmbnnbmdvahnptrdtpbtuyimmemweootjshsmhlunyeslnameyhsdi").unwrap();
+        assert_eq!(result,
+                   ("crypto-request".to_string(),
+                    vec!["oeadtpdagdaobncpftlnylfgfgmuztihbawfsgrtflaotaadwkoyadtaaohdhdcxvsdkfgkepezepefrrffmbnnbmdvahnptrdtpbtuyimmemweootjshsmhlunyeslnameyhsdi".to_string()]
+                   )
+        )
+    }
+
+    #[test]
+    fn test_ur_decoder_single_part() {
+        let mut decoder = Decoder::default();
+        let result = decoder.receive("ur:crypto-request/oeadtpdagdaobncpftlnylfgfgmuztihbawfsgrtflaotaadwkoyadtaaohdhdcxvsdkfgkepezepefrrffmbnnbmdvahnptrdtpbtuyimmemweootjshsmhlunyeslnameyhsdi");
+        assert_eq!(true, result.is_ok());
+        assert_eq!("a201d82550020c223a86f7464693fc650ef3cac04702d901f4a101d902585820e824467caffeaf3bbc3e0ca095e660a9bad80ddb6a919433a37161908b9a3986", hex::encode(decoder.message().unwrap().unwrap()))
     }
 }
