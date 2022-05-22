@@ -26,6 +26,8 @@
 //! assert_eq!(decoder.message().unwrap().as_deref(), Some(data.as_bytes()));
 //! ```
 
+use anyhow::Context;
+
 /// Encodes a data payload into a single URI
 ///
 /// # Examples
@@ -124,14 +126,28 @@ impl Encoder {
     }
 }
 
-/// Decodes a single URI into the data payload
+/// An enum used to indicate whether a UR is single- or
+/// multip-part. See e.g. [`decode`] where it is returned.
+#[derive(Debug, PartialEq)]
+pub enum Kind {
+    SinglePart,
+    MultiPart,
+}
+
+/// Decodes a single URI (either single- or multi-part)
+/// into a tuple consisting of the [`Kind`] and the data
+/// payload.
 ///
 /// # Examples
 ///
 /// ```
 /// assert_eq!(
 ///     ur::ur::decode("ur:bytes/iehsjyhspmwfwfia").unwrap(),
-///     "data".as_bytes()
+///     (ur::ur::Kind::SinglePart, "data".as_bytes().to_vec())
+/// );
+/// assert_eq!(
+///     ur::ur::decode("ur:bytes/1-2/iehsjyhspmwfwfia").unwrap(),
+///     (ur::ur::Kind::MultiPart, "data".as_bytes().to_vec())
 /// );
 /// ```
 ///
@@ -140,22 +156,31 @@ impl Encoder {
 /// This function errors for invalid inputs, for example
 /// an invalid scheme different from "ur" or an invalid number
 /// of "/" separators.
-pub fn decode(value: &str) -> anyhow::Result<Vec<u8>> {
-    match value.strip_prefix("ur:") {
-        Some(v) => {
-            let mut parts = v.rsplit('/');
-            // rsplit will always return at least one item
-            let payload = parts.next().unwrap();
-            match parts.count() {
-                0 => Err(anyhow::anyhow!("No type specified")),
-                1 | 2 => Ok(crate::bytewords::decode(
-                    payload,
-                    &crate::bytewords::Style::Minimal,
-                )?),
-                _ => Err(anyhow::anyhow!("Invalid encoding: too many separators '/'")),
-            }
+pub fn decode(value: &str) -> anyhow::Result<(Kind, Vec<u8>)> {
+    let strip_scheme = value.strip_prefix("ur:").context("Invalid scheme")?;
+    let (type_, strip_type) = strip_scheme.split_once('/').context("No type specified")?;
+    anyhow::ensure!(
+        type_
+            .trim_start_matches(|c: char| c.is_ascii_alphanumeric() || c == '-')
+            .is_empty(),
+        "Type contains invalid characters"
+    );
+    match strip_type.rsplit_once('/') {
+        None => Ok((
+            Kind::SinglePart,
+            crate::bytewords::decode(strip_type, &crate::bytewords::Style::Minimal)?,
+        )),
+        Some((indices, payload)) => {
+            let (idx, idx_total) = indices.split_once('-').context("Invalid indices")?;
+            anyhow::ensure!(
+                idx.parse::<u16>().is_ok() && idx_total.parse::<u16>().is_ok(),
+                "Invalid indices, must match `<idx>-<len>`"
+            );
+            Ok((
+                Kind::MultiPart,
+                crate::bytewords::decode(payload, &crate::bytewords::Style::Minimal)?,
+            ))
         }
-        None => Err(anyhow::anyhow!("Invalid Scheme")),
     }
 }
 
@@ -187,7 +212,8 @@ impl Decoder {
     ///
     /// In all these cases, an error will be returned.
     pub fn receive(&mut self, value: &str) -> anyhow::Result<()> {
-        let decoded = decode(value)?;
+        let (kind, decoded) = decode(value)?;
+        anyhow::ensure!(kind == Kind::MultiPart, "Tried to receive a single-part ur");
         self.fountain
             .receive(crate::fountain::Part::from_cbor(decoded.as_slice())?)?;
         Ok(())
@@ -237,7 +263,7 @@ mod tests {
         let expected = "ur:bytes/hdeymejtswhhylkepmykhhtsytsnoyoyaxaedsuttydmmhhpktpmsrjtgwdpfnsboxgwlbaawzuefywkdplrsrjynbvygabwjldapfcsdwkbrkch";
         assert_eq!(encoded, expected);
         let decoded = decode(&encoded).unwrap();
-        assert_eq!(ur, decoded);
+        assert_eq!((Kind::SinglePart, ur), decoded);
     }
 
     #[test]
@@ -307,8 +333,8 @@ mod tests {
         assert_eq!(expected, e);
 
         // Decoding should yield the same data
-        let d = decode(e.as_str()).unwrap();
-        assert_eq!(data, d);
+        let decoded = decode(e.as_str()).unwrap();
+        assert_eq!((Kind::SinglePart, data), decoded);
     }
 
     #[test]
@@ -329,19 +355,31 @@ mod tests {
             decode("uhr:bytes/aeadaolazmjendeoti")
                 .unwrap_err()
                 .to_string(),
-            "Invalid Scheme"
+            "Invalid scheme"
         );
         assert_eq!(
             decode("ur:aeadaolazmjendeoti").unwrap_err().to_string(),
             "No type specified"
         );
         assert_eq!(
-            decode("ur:bytes/seq/toomuch/aeadaolazmjendeoti")
+            decode("ur:bytes#4/aeadaolazmjendeoti")
                 .unwrap_err()
                 .to_string(),
-            "Invalid encoding: too many separators '/'"
+            "Type contains invalid characters"
+        );
+        assert_eq!(
+            decode("ur:bytes/1-1a/aeadaolazmjendeoti")
+                .unwrap_err()
+                .to_string(),
+            "Invalid indices, must match `<idx>-<len>`"
+        );
+        assert_eq!(
+            decode("ur:bytes/1-1/toomuch/aeadaolazmjendeoti")
+                .unwrap_err()
+                .to_string(),
+            "Invalid indices, must match `<idx>-<len>`"
         );
         decode("ur:bytes/aeadaolazmjendeoti").unwrap();
-        decode("ur:whatever/aeadaolazmjendeoti").unwrap();
+        decode("ur:whatever-12/aeadaolazmjendeoti").unwrap();
     }
 }
