@@ -37,7 +37,7 @@
 //! ```
 
 /// The three different `bytewords` encoding styles. See the [`encode`] documentation for examples.
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub enum Style {
     /// Four-letter words, separated by spaces
     Standard,
@@ -48,7 +48,7 @@ pub enum Style {
 }
 
 /// The two different errors that can be returned when decoding.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Error {
     /// Usually indicates a wrong encoding [`Style`] was passed.
     InvalidWord,
