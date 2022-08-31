@@ -128,7 +128,7 @@ impl Encoder {
 
 /// An enum used to indicate whether a UR is single- or
 /// multip-part. See e.g. [`decode`] where it is returned.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Kind {
     SinglePart,
     MultiPart,
