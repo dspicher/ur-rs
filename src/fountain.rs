@@ -275,7 +275,7 @@ impl Decoder {
     fn process_simple(&mut self, part: Part) -> anyhow::Result<()> {
         let index = *part
             .indexes()
-            .get(0)
+            .first()
             .ok_or_else(|| anyhow::anyhow!("expected item"))?;
         self.decoded.insert(index, part.clone());
         self.queue.push_back((index, part));
@@ -309,8 +309,8 @@ impl Decoder {
                 part.data = xor(&part.data, &simple.data);
                 if new_indexes.len() == 1 {
                     self.decoded
-                        .insert(*new_indexes.get(0).unwrap(), part.clone());
-                    self.queue.push_back((*new_indexes.get(0).unwrap(), part));
+                        .insert(*new_indexes.first().unwrap(), part.clone());
+                    self.queue.push_back((*new_indexes.first().unwrap(), part));
                 } else {
                     self.buffer.insert(new_indexes, part);
                 }
@@ -345,8 +345,8 @@ impl Decoder {
             );
         }
         if indexes.len() == 1 {
-            self.decoded.insert(*indexes.get(0).unwrap(), part.clone());
-            self.queue.push_back((*indexes.get(0).unwrap(), part));
+            self.decoded.insert(*indexes.first().unwrap(), part.clone());
+            self.queue.push_back((*indexes.first().unwrap(), part));
         } else {
             self.buffer.insert(indexes, part);
         }
