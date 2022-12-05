@@ -3,7 +3,6 @@ name = "fuzz"
 version = "0.1.0"
 edition = "2021"
 
-
 [dependencies]
 honggfuzz = "0.5.55"
 ur = { path = ".." }
