@@ -8,8 +8,8 @@ fn main() {
                 ur::bytewords::Style::Uri,
                 ur::bytewords::Style::Minimal,
             ] {
-                let encoded = ur::bytewords::encode(data, &style);
-                let decoded = ur::bytewords::decode(&encoded, &style).unwrap();
+                let encoded = ur::bytewords::encode(data, style);
+                let decoded = ur::bytewords::decode(&encoded, style).unwrap();
                 assert_eq!(data, decoded);
             }
         });

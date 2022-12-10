@@ -7,37 +7,37 @@
 //! ```
 //! use ur::bytewords::{decode, encode, Style};
 //! let data = "Some bytes".as_bytes();
-//! let encoded = encode(data, &Style::Standard);
+//! let encoded = encode(data, Style::Standard);
 //! assert_eq!(
 //!     encoded,
 //!     "guru jowl join inch crux iced kick jury inch junk taxi aqua kite limp"
 //! );
-//! assert_eq!(data, decode(&encoded, &Style::Standard).unwrap());
+//! assert_eq!(data, decode(&encoded, Style::Standard).unwrap());
 //! ```
 //!
 //! # URI style
 //! ```
 //! use ur::bytewords::{decode, encode, Style};
 //! let data = "Some bytes".as_bytes();
-//! let encoded = encode(data, &Style::Uri);
+//! let encoded = encode(data, Style::Uri);
 //! assert_eq!(
 //!     encoded,
 //!     "guru-jowl-join-inch-crux-iced-kick-jury-inch-junk-taxi-aqua-kite-limp"
 //! );
-//! assert_eq!(data, decode(&encoded, &Style::Uri).unwrap());
+//! assert_eq!(data, decode(&encoded, Style::Uri).unwrap());
 //! ```
 //!
 //! # Minimal style
 //! ```
 //! use ur::bytewords::{decode, encode, Style};
 //! let data = "Some binary data".as_bytes();
-//! let encoded = encode(data, &Style::Minimal);
+//! let encoded = encode(data, Style::Minimal);
 //! assert_eq!(encoded, "gujljnihcxidinjthsjpkkcxiehsjyhsnsgdmkht");
-//! assert_eq!(data, decode(&encoded, &Style::Minimal).unwrap());
+//! assert_eq!(data, decode(&encoded, Style::Minimal).unwrap());
 //! ```
 
 /// The three different `bytewords` encoding styles. See the [`encode`] documentation for examples.
-#[derive(PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Style {
     /// Four-letter words, separated by spaces
     Standard,
@@ -67,7 +67,7 @@ impl std::fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-/// Deocdes a `bytewords`-encoded String back into a byte payload. The encoding
+/// Decodes a `bytewords`-encoded String back into a byte payload. The encoding
 /// must contain a four-byte checksum.
 ///
 /// # Examples
@@ -75,15 +75,15 @@ impl std::error::Error for Error {}
 /// ```
 /// use ur::bytewords::{decode, Style};
 /// assert_eq!(
-///     decode("able tied also webs lung", &Style::Standard).unwrap(),
+///     decode("able tied also webs lung", Style::Standard).unwrap(),
 ///     vec![0]
 /// );
 /// assert_eq!(
-///     decode("able-tied-also-webs-lung", &Style::Uri).unwrap(),
+///     decode("able-tied-also-webs-lung", Style::Uri).unwrap(),
 ///     vec![0]
 /// );
 /// // Notice how the minimal encoding consists of the start and end letters of the bytewords
-/// assert_eq!(decode("aetdaowslg", &Style::Minimal).unwrap(), vec![0]);
+/// assert_eq!(decode("aetdaowslg", Style::Minimal).unwrap(), vec![0]);
 /// ```
 ///
 /// # Errors
@@ -91,7 +91,7 @@ impl std::error::Error for Error {}
 /// If the encoded string contains unrecognized words, is inconsistent with
 /// the provided `style`, or contains an invalid checksum, an error will be
 /// returned.
-pub fn decode(encoded: &str, style: &Style) -> Result<Vec<u8>, Error> {
+pub fn decode(encoded: &str, style: Style) -> Result<Vec<u8>, Error> {
     let separator = match style {
         Style::Standard => " ",
         Style::Uri => "-",
@@ -139,13 +139,13 @@ fn strip_checksum(data: &[u8]) -> Result<Vec<u8>, Error> {
 ///
 /// ```
 /// use ur::bytewords::{encode, Style};
-/// assert_eq!(encode(&[0], &Style::Standard), "able tied also webs lung");
-/// assert_eq!(encode(&[0], &Style::Uri), "able-tied-also-webs-lung");
+/// assert_eq!(encode(&[0], Style::Standard), "able tied also webs lung");
+/// assert_eq!(encode(&[0], Style::Uri), "able-tied-also-webs-lung");
 /// // Notice how the minimal encoding consists of the start and end letters of the bytewords
-/// assert_eq!(encode(&[0], &Style::Minimal), "aetdaowslg");
+/// assert_eq!(encode(&[0], Style::Minimal), "aetdaowslg");
 /// ```
 #[must_use]
-pub fn encode(data: &[u8], style: &Style) -> String {
+pub fn encode(data: &[u8], style: Style) -> String {
     let checksum = crate::crc32().checksum(data).to_be_bytes();
     let data = data.iter().chain(checksum.iter());
     let words: Vec<&str> = match style {
@@ -178,62 +178,56 @@ mod tests {
     fn test_bytewords() {
         let input = vec![0, 1, 2, 128, 255];
         assert_eq!(
-            encode(&input, &Style::Standard),
+            encode(&input, Style::Standard),
             "able acid also lava zoom jade need echo taxi"
         );
         assert_eq!(
-            encode(&input, &Style::Uri),
+            encode(&input, Style::Uri),
             "able-acid-also-lava-zoom-jade-need-echo-taxi"
         );
-        assert_eq!(encode(&input, &Style::Minimal), "aeadaolazmjendeoti");
+        assert_eq!(encode(&input, Style::Minimal), "aeadaolazmjendeoti");
 
         assert_eq!(
             decode(
                 "able acid also lava zoom jade need echo taxi",
-                &Style::Standard
+                Style::Standard
             )
             .unwrap(),
             input
         );
         assert_eq!(
-            decode("able-acid-also-lava-zoom-jade-need-echo-taxi", &Style::Uri).unwrap(),
+            decode("able-acid-also-lava-zoom-jade-need-echo-taxi", Style::Uri).unwrap(),
             input
         );
-        assert_eq!(
-            decode("aeadaolazmjendeoti", &Style::Minimal).unwrap(),
-            input
-        );
+        assert_eq!(decode("aeadaolazmjendeoti", Style::Minimal).unwrap(), input);
 
         // empty payload is allowed
-        decode(&encode(&[], &Style::Minimal), &Style::Minimal).unwrap();
+        decode(&encode(&[], Style::Minimal), Style::Minimal).unwrap();
 
         // bad checksum
         assert_eq!(
             decode(
                 "able acid also lava zero jade need echo wolf",
-                &Style::Standard
+                Style::Standard
             )
             .unwrap_err(),
             Error::InvalidChecksum
         );
         assert_eq!(
-            decode("able-acid-also-lava-zero-jade-need-echo-wolf", &Style::Uri).unwrap_err(),
+            decode("able-acid-also-lava-zero-jade-need-echo-wolf", Style::Uri).unwrap_err(),
             Error::InvalidChecksum
         );
         assert_eq!(
-            decode("aeadaolazojendeowf", &Style::Minimal).unwrap_err(),
+            decode("aeadaolazojendeowf", Style::Minimal).unwrap_err(),
             Error::InvalidChecksum
         );
 
         // too short
         assert_eq!(
-            decode("wolf", &Style::Standard).unwrap_err(),
+            decode("wolf", Style::Standard).unwrap_err(),
             Error::InvalidChecksum
         );
-        assert_eq!(
-            decode("", &Style::Standard).unwrap_err(),
-            Error::InvalidWord
-        );
+        assert_eq!(decode("", Style::Standard).unwrap_err(), Error::InvalidWord);
     }
 
     #[test]
@@ -266,12 +260,12 @@ mod tests {
                                fhecwzonnbmhcybtgwwelpflgmfezeonledtgocs\
                                fzhycypf";
 
-        assert_eq!(decode(encoded, &Style::Standard).unwrap(), input.to_vec());
+        assert_eq!(decode(encoded, Style::Standard).unwrap(), input.to_vec());
         assert_eq!(
-            decode(encoded_minimal, &Style::Minimal).unwrap(),
+            decode(encoded_minimal, Style::Minimal).unwrap(),
             input.to_vec()
         );
-        assert_eq!(encode(&input, &Style::Standard), encoded);
-        assert_eq!(encode(&input, &Style::Minimal), encoded_minimal);
+        assert_eq!(encode(&input, Style::Standard), encoded);
+        assert_eq!(encode(&input, Style::Minimal), encoded_minimal);
     }
 }

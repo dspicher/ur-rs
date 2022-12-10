@@ -39,7 +39,7 @@ use anyhow::Context;
 /// );
 /// ```
 pub fn encode<T: Into<String>>(data: &[u8], ur_type: T) -> String {
-    let body = crate::bytewords::encode(data, &crate::bytewords::Style::Minimal);
+    let body = crate::bytewords::encode(data, crate::bytewords::Style::Minimal);
     encode_ur(&[ur_type.into(), body])
 }
 
@@ -93,7 +93,7 @@ impl Encoder {
     /// If serialization fails an error will be returned.
     pub fn next_part(&mut self) -> anyhow::Result<String> {
         let part = self.fountain.next_part();
-        let body = crate::bytewords::encode(&part.cbor()?, &crate::bytewords::Style::Minimal);
+        let body = crate::bytewords::encode(&part.cbor()?, crate::bytewords::Style::Minimal);
         Ok(encode_ur(&[self.ur_type.clone(), part.sequence_id(), body]))
     }
 
@@ -168,7 +168,7 @@ pub fn decode(value: &str) -> anyhow::Result<(Kind, Vec<u8>)> {
     match strip_type.rsplit_once('/') {
         None => Ok((
             Kind::SinglePart,
-            crate::bytewords::decode(strip_type, &crate::bytewords::Style::Minimal)?,
+            crate::bytewords::decode(strip_type, crate::bytewords::Style::Minimal)?,
         )),
         Some((indices, payload)) => {
             let (idx, idx_total) = indices.split_once('-').context("Invalid indices")?;
@@ -178,7 +178,7 @@ pub fn decode(value: &str) -> anyhow::Result<(Kind, Vec<u8>)> {
             );
             Ok((
                 Kind::MultiPart,
-                crate::bytewords::decode(payload, &crate::bytewords::Style::Minimal)?,
+                crate::bytewords::decode(payload, crate::bytewords::Style::Minimal)?,
             ))
         }
     }
