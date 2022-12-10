@@ -248,12 +248,11 @@ impl Decoder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_cbor::Value;
-    use std::collections::BTreeMap;
+    use minicbor::{bytes::ByteVec, data::Tag};
 
     fn make_message_ur(length: usize, seed: &str) -> Vec<u8> {
         let message = crate::xoshiro::test_utils::make_message(seed, length);
-        serde_cbor::to_vec(&Value::Bytes(message)).unwrap()
+        minicbor::to_vec(ByteVec::from(message)).unwrap()
     }
 
     #[test]
@@ -303,30 +302,27 @@ mod tests {
     fn test_ur_encoder_decoder_bc_crypto_request() {
         // https://github.com/BlockchainCommons/crypto-commons/blob/67ea252f4a7f295bb347cb046796d5b445b3ad3c/Docs/ur-99-request-response.md#the-seed-request
 
-        // 2.1 UUID: tag 37 type bytes(16)
-        let uuid_value = Value::Bytes(hex::decode("020C223A86F7464693FC650EF3CAC047").unwrap());
-        let uuid = Value::Tag(37, Box::new(uuid_value));
+        fn crypto_seed() -> Result<Vec<u8>, minicbor::encode::Error<std::convert::Infallible>> {
+            let mut e = minicbor::Encoder::new(Vec::new());
 
-        // 2.2.1 crypto-seed-digest: tag 600 type bytes(32)
-        let crypto_seed_digest_value = Value::Bytes(
-            hex::decode("E824467CAFFEAF3BBC3E0CA095E660A9BAD80DDB6A919433A37161908B9A3986")
-                .unwrap(),
-        );
-        let crypto_seed_digest = Value::Tag(600, Box::new(crypto_seed_digest_value));
+            let uuid = hex::decode("020C223A86F7464693FC650EF3CAC047").unwrap();
+            let seed_digest =
+                hex::decode("E824467CAFFEAF3BBC3E0CA095E660A9BAD80DDB6A919433A37161908B9A3986")
+                    .unwrap();
 
-        // 2.2 crypto-seed: tag 500 type map
-        let mut crypto_seed_map = BTreeMap::new();
-        crypto_seed_map.insert(Value::Integer(1), crypto_seed_digest);
-        let crypto_seed_value = Value::Map(crypto_seed_map);
-        let crypto_seed = Value::Tag(500, Box::new(crypto_seed_value));
+            #[rustfmt::skip]
+            e.map(2)?
+                // 2.1 UUID: tag 37 type bytes(16)
+                .u8(1)?.tag(Tag::Unassigned(37))?.bytes(&uuid)?
+                // 2.2 crypto-seed: tag 500 type map
+                .u8(2)?.tag(Tag::Unassigned(500))?.map(1)?
+                // 2.2.1 crypto-seed-digest: tag 600 type bytes(32)
+                .u8(1)?.tag(Tag::Unassigned(600))?.bytes(&seed_digest)?;
 
-        // 1. Top level is a map
-        let mut top_level_map = BTreeMap::new();
-        top_level_map.insert(Value::Integer(1), uuid);
-        top_level_map.insert(Value::Integer(2), crypto_seed);
-        let top_level = Value::Map(top_level_map);
+            Ok(e.into_writer())
+        }
 
-        let data = serde_cbor::to_vec(&top_level).unwrap();
+        let data = crypto_seed().unwrap();
 
         let e = encode(&data, "crypto-request");
         let expected = "ur:crypto-request/oeadtpdagdaobncpftlnylfgfgmuztihbawfsgrtflaotaadwkoyadtaaohdhdcxvsdkfgkepezepefrrffmbnnbmdvahnptrdtpbtuyimmemweootjshsmhlunyeslnameyhsdi";

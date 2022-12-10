@@ -82,9 +82,6 @@
 //! );
 //! ```
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use serde_cbor::Value;
-
 /// An encoder capable of emitting fountain-encoded transmissions.
 ///
 /// # Examples
@@ -462,71 +459,42 @@ pub struct Part {
     data: Vec<u8>,
 }
 
-impl Serialize for Part {
-    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+impl<C> minicbor::Encode<C> for Part {
+    fn encode<W: minicbor::encode::Write>(
+        &self,
+        e: &mut minicbor::Encoder<W>,
+        _ctx: &mut C,
+    ) -> Result<(), minicbor::encode::Error<W::Error>> {
         #[allow(clippy::cast_possible_truncation)]
-        let data = vec![
-            Value::from(self.sequence as u32),
-            Value::from(self.sequence_count as u32),
-            Value::from(self.message_length as u32),
-            Value::from(self.checksum),
-            Value::Bytes(self.data.clone()),
-        ];
+        e.array(5)?
+            .u32(self.sequence as u32)?
+            .u32(self.sequence_count as u32)?
+            .u32(self.message_length as u32)?
+            .u32(self.checksum as u32)?
+            .bytes(&self.data)?;
 
-        Value::Array(data).serialize(s)
+        Ok(())
     }
 }
 
-impl<'de> Deserialize<'de> for Part {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        match Value::deserialize(deserializer) {
-            Ok(value) => match value {
-                Value::Array(array) => {
-                    if array.len() != 5 {
-                        return Err(serde::de::Error::custom("invalid cbor array length"));
-                    }
-
-                    let check_cbor_number = |array: &Vec<Value>, index| -> Result<u32, D::Error> {
-                        match array.get(index).unwrap() {
-                            Value::Integer(integer) if *integer <= i128::from(u32::MAX) =>
-                            {
-                                #[allow(clippy::cast_possible_truncation)]
-                                #[allow(clippy::cast_sign_loss)]
-                                Ok(*integer as u32)
-                            }
-                            _ => Err(serde::de::Error::custom(format!(
-                                "unexpected item at position {}",
-                                index
-                            ))),
-                        }
-                    };
-
-                    let sequence = check_cbor_number(&array, 0)?;
-                    let sequence_count = check_cbor_number(&array, 1)?;
-                    let message_length = check_cbor_number(&array, 2)?;
-                    let checksum = check_cbor_number(&array, 3)?;
-
-                    let data = match array.get(4).unwrap().clone() {
-                        Value::Bytes(bytes) => bytes,
-                        _ => {
-                            return Err(serde::de::Error::custom("unexpected item at position 4"));
-                        }
-                    };
-
-                    Ok(Self {
-                        sequence: sequence as usize,
-                        sequence_count: sequence_count as usize,
-                        message_length: message_length as usize,
-                        checksum,
-                        data,
-                    })
-                }
-                _ => Err(serde::de::Error::custom("invalid top-level item")),
-            },
-            Err(_) => Err(serde::de::Error::custom(
-                "invalid cbor serialization for Part",
-            )),
+impl<'b, C> minicbor::Decode<'b, C> for Part {
+    fn decode(
+        d: &mut minicbor::Decoder<'b>,
+        _ctx: &mut C,
+    ) -> Result<Self, minicbor::decode::Error> {
+        if !matches!(d.array()?, Some(5)) {
+            return Err(minicbor::decode::Error::message(
+                "invalid CBOR array length",
+            ));
         }
+
+        Ok(Self {
+            sequence: d.u32()? as usize,
+            sequence_count: d.u32()? as usize,
+            message_length: d.u32()? as usize,
+            checksum: d.u32()?,
+            data: d.bytes()?.to_vec(),
+        })
     }
 }
 
@@ -546,7 +514,7 @@ impl std::fmt::Display for Part {
 
 impl Part {
     pub(crate) fn from_cbor(cbor: &[u8]) -> anyhow::Result<Self> {
-        Ok(serde_cbor::from_slice(cbor)?)
+        minicbor::decode(cbor).map_err(|e| anyhow::anyhow!(e))
     }
 
     /// Returns the indexes of the message segments that were combined into this part.
@@ -589,7 +557,7 @@ impl Part {
     }
 
     pub(crate) fn cbor(&self) -> anyhow::Result<Vec<u8>> {
-        Ok(serde_cbor::to_vec(self)?)
+        minicbor::to_vec(self).map_err(|e| anyhow::anyhow!(e))
     }
 
     #[must_use]
@@ -953,60 +921,60 @@ mod tests {
         // but implies a following value
         assert_eq!(
             Part::from_cbor(&[0x18]).unwrap_err().to_string(),
-            "invalid cbor serialization for Part"
+            "unexpected type u8 at position 0: expected array"
         );
         // the top-level item must be an array
         assert_eq!(
             Part::from_cbor(&[0x1]).unwrap_err().to_string(),
-            "invalid top-level item"
+            "unexpected type u8 at position 0: expected array"
         );
         // the array must be of length five
         assert_eq!(
             Part::from_cbor(&[0x84, 0x1, 0x2, 0x3, 0x4])
                 .unwrap_err()
                 .to_string(),
-            "invalid cbor array length"
+            "decode error: invalid CBOR array length"
         );
         assert_eq!(
             Part::from_cbor(&[0x86, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6])
                 .unwrap_err()
                 .to_string(),
-            "invalid cbor array length"
+            "decode error: invalid CBOR array length"
         );
         // the first item must be an unsigned integer
         assert_eq!(
             Part::from_cbor(&[0x85, 0x41, 0x1, 0x2, 0x3, 0x4, 0x41, 0x1])
                 .unwrap_err()
                 .to_string(),
-            "unexpected item at position 0"
+            "unexpected type bytes at position 1: expected u32"
         );
         // the second item must be an unsigned integer
         assert_eq!(
             Part::from_cbor(&[0x85, 0x1, 0x41, 0x2, 0x3, 0x4, 0x41, 0x1])
                 .unwrap_err()
                 .to_string(),
-            "unexpected item at position 1"
+            "unexpected type bytes at position 2: expected u32"
         );
         // the third item must be an unsigned integer
         assert_eq!(
             Part::from_cbor(&[0x85, 0x1, 0x2, 0x41, 0x3, 0x4, 0x41, 0x1])
                 .unwrap_err()
                 .to_string(),
-            "unexpected item at position 2"
+            "unexpected type bytes at position 3: expected u32"
         );
         // the fourth item must be an unsigned integer
         assert_eq!(
             Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x41, 0x4, 0x41, 0x1])
                 .unwrap_err()
                 .to_string(),
-            "unexpected item at position 3"
+            "unexpected type bytes at position 4: expected u32"
         );
         // the fifth item must be byte string
         assert_eq!(
             Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x4, 0x5])
                 .unwrap_err()
                 .to_string(),
-            "unexpected item at position 4"
+            "unexpected type u8 at position 5: expected bytes (definite length)"
         );
         Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x4, 0x41, 0x5]).unwrap();
     }
@@ -1034,7 +1002,7 @@ mod tests {
             ])
             .unwrap_err()
             .to_string(),
-            "unexpected item at position 0"
+            "72623859874597901 overflows target type at position 1: when converting u64 to u32"
         );
         assert_eq!(
             Part::from_cbor(&[
@@ -1043,7 +1011,7 @@ mod tests {
             ])
             .unwrap_err()
             .to_string(),
-            "unexpected item at position 1"
+            "361984551159532557 overflows target type at position 6: when converting u64 to u32"
         );
         assert_eq!(
             Part::from_cbor(&[
@@ -1052,7 +1020,7 @@ mod tests {
             ])
             .unwrap_err()
             .to_string(),
-            "unexpected item at position 2"
+            "653040715144301581 overflows target type at position 11: when converting u64 to u32"
         );
         assert_eq!(
             Part::from_cbor(&[
@@ -1061,7 +1029,7 @@ mod tests {
             ])
             .unwrap_err()
             .to_string(),
-            "unexpected item at position 3"
+            "1374746970656803853 overflows target type at position 16: when converting u64 to u32"
         );
     }
 }
