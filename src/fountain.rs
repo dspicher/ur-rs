@@ -82,6 +82,53 @@
 //! );
 //! ```
 
+use std::convert::Infallible;
+
+/// Errors that can happen during fountain encoding and decoding.
+#[derive(Debug)]
+pub enum Error {
+    /// CBOR decoding  error.
+    CborDecode(minicbor::decode::Error),
+    /// CBOR encoding error.
+    CborEncode(minicbor::encode::Error<Infallible>),
+    /// Expected non-empty message.
+    EmptyMessage,
+    /// Fragment length should be a positive integer greater than 0.
+    InvalidFragmentLen,
+    /// Received part is inconsistent with previous ones.
+    InconsistentPart,
+    /// An item was expected.
+    ExpectedItem,
+    /// Invalid padding detected.
+    InvalidPadding,
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::CborDecode(e) => write!(f, "{}", e),
+            Self::CborEncode(e) => write!(f, "{}", e),
+            Self::EmptyMessage => write!(f, "expected non-empty message"),
+            Self::InvalidFragmentLen => write!(f, "expected positive maximum fragment length"),
+            Self::InconsistentPart => write!(f, "part is inconsistent with previous ones"),
+            Self::ExpectedItem => write!(f, "expected item"),
+            Self::InvalidPadding => write!(f, "invalid padding"),
+        }
+    }
+}
+
+impl From<minicbor::decode::Error> for Error {
+    fn from(e: minicbor::decode::Error) -> Self {
+        Self::CborDecode(e)
+    }
+}
+
+impl From<minicbor::encode::Error<Infallible>> for Error {
+    fn from(e: minicbor::encode::Error<Infallible>) -> Self {
+        Self::CborEncode(e)
+    }
+}
+
 /// An encoder capable of emitting fountain-encoded transmissions.
 ///
 /// # Examples
@@ -118,12 +165,12 @@ impl Encoder {
     ///
     /// If an empty message or a zero maximum fragment length is passed, an error
     /// will be returned.
-    pub fn new(message: &[u8], max_fragment_length: usize) -> anyhow::Result<Self> {
+    pub fn new(message: &[u8], max_fragment_length: usize) -> Result<Self, Error> {
         if message.is_empty() {
-            anyhow::bail!("expected non-empty message")
+            return Err(Error::EmptyMessage);
         }
         if max_fragment_length == 0 {
-            anyhow::bail!("expected positive maximum fragment length")
+            return Err(Error::InvalidFragmentLen);
         }
         let fragment_length = fragment_length(message.len(), max_fragment_length);
         let fragments = partition(message.to_vec(), fragment_length);
@@ -244,7 +291,7 @@ impl Decoder {
     /// with previously received parts, an error will be returned.
     ///
     /// [`validate`]: Decoder::validate
-    pub fn receive(&mut self, part: Part) -> anyhow::Result<bool> {
+    pub fn receive(&mut self, part: Part) -> Result<bool, Error> {
         if self.complete() {
             return Ok(false);
         }
@@ -254,7 +301,7 @@ impl Decoder {
             self.checksum = part.checksum;
             self.fragment_length = part.data.len();
         } else if !self.validate(&part) {
-            anyhow::bail!("part is inconsistent with previous ones")
+            return Err(Error::InconsistentPart);
         }
         let indexes = part.indexes();
         if self.received.contains(&indexes) {
@@ -269,23 +316,17 @@ impl Decoder {
         Ok(true)
     }
 
-    fn process_simple(&mut self, part: Part) -> anyhow::Result<()> {
-        let index = *part
-            .indexes()
-            .first()
-            .ok_or_else(|| anyhow::anyhow!("expected item"))?;
+    fn process_simple(&mut self, part: Part) -> Result<(), Error> {
+        let index = *part.indexes().first().ok_or(Error::ExpectedItem)?;
         self.decoded.insert(index, part.clone());
         self.queue.push_back((index, part));
         self.process_queue()?;
         Ok(())
     }
 
-    fn process_queue(&mut self) -> anyhow::Result<()> {
+    fn process_queue(&mut self) -> Result<(), Error> {
         while !self.queue.is_empty() {
-            let (index, simple) = self
-                .queue
-                .pop_front()
-                .ok_or_else(|| anyhow::anyhow!("expected item"))?;
+            let (index, simple) = self.queue.pop_front().ok_or(Error::ExpectedItem)?;
             let to_process: Vec<Vec<usize>> = self
                 .buffer
                 .keys()
@@ -293,15 +334,12 @@ impl Decoder {
                 .cloned()
                 .collect();
             for indexes in to_process {
-                let mut part = self
-                    .buffer
-                    .remove(&indexes)
-                    .ok_or_else(|| anyhow::anyhow!("expected item"))?;
+                let mut part = self.buffer.remove(&indexes).ok_or(Error::ExpectedItem)?;
                 let mut new_indexes = indexes.clone();
                 let to_remove = indexes
                     .iter()
                     .position(|&x| x == index)
-                    .ok_or_else(|| anyhow::anyhow!("expected item"))?;
+                    .ok_or(Error::ExpectedItem)?;
                 new_indexes.remove(to_remove);
                 part.data = xor(&part.data, &simple.data);
                 if new_indexes.len() == 1 {
@@ -316,7 +354,7 @@ impl Decoder {
         Ok(())
     }
 
-    fn process_complex(&mut self, mut part: Part) -> anyhow::Result<()> {
+    fn process_complex(&mut self, mut part: Part) -> Result<(), Error> {
         let mut indexes = part.indexes();
         let to_remove: Vec<usize> = indexes
             .clone()
@@ -330,15 +368,11 @@ impl Decoder {
             let idx_to_remove = indexes
                 .iter()
                 .position(|&x| x == remove)
-                .ok_or_else(|| anyhow::anyhow!("expected item"))?;
+                .ok_or(Error::ExpectedItem)?;
             indexes.remove(idx_to_remove);
             part.data = xor(
                 &part.data,
-                &self
-                    .decoded
-                    .get(&remove)
-                    .ok_or_else(|| anyhow::anyhow!("expected item"))?
-                    .data,
+                &self.decoded.get(&remove).ok_or(Error::ExpectedItem)?.data,
             );
         }
         if indexes.len() == 1 {
@@ -415,31 +449,27 @@ impl Decoder {
     /// See the [`crate::fountain`] module documentation for an example.
     ///
     /// [`complete`]: Decoder::complete
-    pub fn message(&self) -> anyhow::Result<Option<Vec<u8>>> {
+    pub fn message(&self) -> Result<Option<Vec<u8>>, Error> {
         if !self.complete() {
             return Ok(None);
         }
         let combined = (0..self.sequence_count)
-            .map(|idx| {
-                self.decoded
-                    .get(&idx)
-                    .ok_or_else(|| anyhow::anyhow!("expected item"))
-            })
-            .collect::<Result<Vec<&Part>, anyhow::Error>>()?
+            .map(|idx| self.decoded.get(&idx).ok_or(Error::ExpectedItem))
+            .collect::<Result<Vec<&Part>, Error>>()?
             .iter()
             .fold(vec![], |a, b| [a, b.data.clone()].concat());
         if !combined
             .get(self.message_length..)
-            .ok_or_else(|| anyhow::anyhow!("expected item"))?
+            .ok_or(Error::ExpectedItem)?
             .iter()
             .all(|&x| x == 0)
         {
-            anyhow::bail!("invalid padding detected")
+            return Err(Error::InvalidPadding);
         }
         Ok(Some(
             combined
                 .get(..self.message_length)
-                .ok_or_else(|| anyhow::anyhow!("expected item"))?
+                .ok_or(Error::ExpectedItem)?
                 .to_vec(),
         ))
     }
@@ -499,8 +529,8 @@ impl<'b, C> minicbor::Decode<'b, C> for Part {
 }
 
 impl Part {
-    pub(crate) fn from_cbor(cbor: &[u8]) -> anyhow::Result<Self> {
-        minicbor::decode(cbor).map_err(|e| anyhow::anyhow!(e))
+    pub(crate) fn from_cbor(cbor: &[u8]) -> Result<Self, Error> {
+        minicbor::decode(cbor).map_err(Error::from)
     }
 
     /// Returns the indexes of the message segments that were combined into this part.
@@ -542,8 +572,8 @@ impl Part {
         self.indexes().len() == 1
     }
 
-    pub(crate) fn cbor(&self) -> anyhow::Result<Vec<u8>> {
-        minicbor::to_vec(self).map_err(|e| anyhow::anyhow!(e))
+    pub(crate) fn cbor(&self) -> Result<Vec<u8>, Error> {
+        minicbor::to_vec(self).map_err(Error::from)
     }
 
     #[must_use]
@@ -788,10 +818,10 @@ mod tests {
 
     #[test]
     fn test_fountain_encoder_zero_max_length() {
-        assert_eq!(
-            Encoder::new("foo".as_bytes(), 0).unwrap_err().to_string(),
-            "expected positive maximum fragment length"
-        );
+        assert!(matches!(
+            Encoder::new("foo".as_bytes(), 0),
+            Err(Error::InvalidFragmentLen)
+        ));
     }
 
     #[test]
@@ -862,10 +892,10 @@ mod tests {
         // non-valid
         let mut part = encoder.next_part();
         part.checksum += 1;
-        assert_eq!(
-            decoder.receive(part).unwrap_err().to_string(),
-            "part is inconsistent with previous ones"
-        );
+        assert!(matches!(
+            decoder.receive(part),
+            Err(Error::InconsistentPart)
+        ));
         // decoder complete
         while !decoder.complete() {
             let part = encoder.next_part();
@@ -914,63 +944,46 @@ mod tests {
     fn test_part_from_cbor_errors() {
         // 0x18 is the first byte value that doesn't directly encode a u8,
         // but implies a following value
-        assert_eq!(
-            Part::from_cbor(&[0x18]).unwrap_err().to_string(),
-            "unexpected type u8 at position 0: expected array"
-        );
+        assert!(matches!(
+            Part::from_cbor(&[0x18]),
+            Err(Error::CborDecode(_))
+        ));
         // the top-level item must be an array
-        assert_eq!(
-            Part::from_cbor(&[0x1]).unwrap_err().to_string(),
-            "unexpected type u8 at position 0: expected array"
-        );
+        assert!(matches!(Part::from_cbor(&[0x1]), Err(Error::CborDecode(_))));
         // the array must be of length five
-        assert_eq!(
-            Part::from_cbor(&[0x84, 0x1, 0x2, 0x3, 0x4])
-                .unwrap_err()
-                .to_string(),
-            "decode error: invalid CBOR array length"
-        );
-        assert_eq!(
-            Part::from_cbor(&[0x86, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6])
-                .unwrap_err()
-                .to_string(),
-            "decode error: invalid CBOR array length"
-        );
+        assert!(matches!(
+            Part::from_cbor(&[0x84, 0x1, 0x2, 0x3, 0x4]),
+            Err(Error::CborDecode(_))
+        ));
+        assert!(matches!(
+            Part::from_cbor(&[0x86, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6]),
+            Err(Error::CborDecode(_))
+        ));
         // the first item must be an unsigned integer
-        assert_eq!(
-            Part::from_cbor(&[0x85, 0x41, 0x1, 0x2, 0x3, 0x4, 0x41, 0x1])
-                .unwrap_err()
-                .to_string(),
-            "unexpected type bytes at position 1: expected u32"
-        );
+        assert!(matches!(
+            Part::from_cbor(&[0x85, 0x41, 0x1, 0x2, 0x3, 0x4, 0x41, 0x1]),
+            Err(Error::CborDecode(_))
+        ));
         // the second item must be an unsigned integer
-        assert_eq!(
-            Part::from_cbor(&[0x85, 0x1, 0x41, 0x2, 0x3, 0x4, 0x41, 0x1])
-                .unwrap_err()
-                .to_string(),
-            "unexpected type bytes at position 2: expected u32"
-        );
+        assert!(matches!(
+            Part::from_cbor(&[0x85, 0x1, 0x41, 0x2, 0x3, 0x4, 0x41, 0x1]),
+            Err(Error::CborDecode(_))
+        ));
         // the third item must be an unsigned integer
-        assert_eq!(
-            Part::from_cbor(&[0x85, 0x1, 0x2, 0x41, 0x3, 0x4, 0x41, 0x1])
-                .unwrap_err()
-                .to_string(),
-            "unexpected type bytes at position 3: expected u32"
-        );
+        assert!(matches!(
+            Part::from_cbor(&[0x85, 0x1, 0x2, 0x41, 0x3, 0x4, 0x41, 0x1]),
+            Err(Error::CborDecode(_))
+        ));
         // the fourth item must be an unsigned integer
-        assert_eq!(
-            Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x41, 0x4, 0x41, 0x1])
-                .unwrap_err()
-                .to_string(),
-            "unexpected type bytes at position 4: expected u32"
-        );
+        assert!(matches!(
+            Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x41, 0x4, 0x41, 0x1]),
+            Err(Error::CborDecode(_))
+        ));
         // the fifth item must be byte string
-        assert_eq!(
-            Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x4, 0x5])
-                .unwrap_err()
-                .to_string(),
-            "unexpected type u8 at position 5: expected bytes (definite length)"
-        );
+        assert!(matches!(
+            Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x4, 0x5]),
+            Err(Error::CborDecode(_))
+        ));
         Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x4, 0x41, 0x5]).unwrap();
     }
 
@@ -990,41 +1003,33 @@ mod tests {
         ])
         .unwrap();
         // u64
-        assert_eq!(
+        assert!(matches!(
             Part::from_cbor(&[
                 0x85, 0x1b, 0x1, 0x2, 0x3, 0x4, 0xa, 0xb, 0xc, 0xd, 0x1a, 0x5, 0x6, 0x7, 0x8, 0x1a,
                 0x9, 0x10, 0x11, 0x12, 0x1a, 0x13, 0x14, 0x15, 0x16, 0x41, 0x5,
-            ])
-            .unwrap_err()
-            .to_string(),
-            "72623859874597901 overflows target type at position 1: when converting u64 to u32"
-        );
-        assert_eq!(
+            ]),
+            Err(Error::CborDecode(_))
+        ));
+        assert!(matches!(
             Part::from_cbor(&[
                 0x85, 0x1a, 0x1, 0x2, 0x3, 0x4, 0x1b, 0x5, 0x6, 0x7, 0x8, 0xa, 0xb, 0xc, 0xd, 0x1a,
                 0x9, 0x10, 0x11, 0x12, 0x1a, 0x13, 0x14, 0x15, 0x16, 0x41, 0x5,
-            ])
-            .unwrap_err()
-            .to_string(),
-            "361984551159532557 overflows target type at position 6: when converting u64 to u32"
-        );
-        assert_eq!(
+            ]),
+            Err(Error::CborDecode(_))
+        ));
+        assert!(matches!(
             Part::from_cbor(&[
                 0x85, 0x1a, 0x1, 0x2, 0x3, 0x4, 0x1a, 0x5, 0x6, 0x7, 0x8, 0x1b, 0x9, 0x10, 0x11,
                 0x12, 0xa, 0xb, 0xc, 0xd, 0x1a, 0x13, 0x14, 0x15, 0x16, 0x41, 0x5,
-            ])
-            .unwrap_err()
-            .to_string(),
-            "653040715144301581 overflows target type at position 11: when converting u64 to u32"
-        );
-        assert_eq!(
+            ]),
+            Err(Error::CborDecode(_))
+        ));
+        assert!(matches!(
             Part::from_cbor(&[
                 0x85, 0x1a, 0x1, 0x2, 0x3, 0x4, 0x1a, 0x5, 0x6, 0x7, 0x8, 0x1a, 0x9, 0x10, 0x11,
                 0x12, 0x1b, 0x13, 0x14, 0x15, 0x16, 0xa, 0xb, 0xc, 0xd, 0x41, 0x5,
-            ])
-            .unwrap_err()
-            .to_string(),
-            "1374746970656803853 overflows target type at position 16: when converting u64 to u32"
-        );
+            ]),
+            Err(Error::CborDecode(_))
+        ));
     }
 }
