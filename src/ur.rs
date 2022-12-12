@@ -26,7 +26,48 @@
 //! assert_eq!(decoder.message().unwrap().as_deref(), Some(data.as_bytes()));
 //! ```
 
-use anyhow::Context;
+/// Errors that can happen during encoding and decoding of URs.
+#[derive(Debug)]
+pub enum Error {
+    Bytewords(crate::bytewords::Error),
+    Fountain(crate::fountain::Error),
+    /// Invalid scheme.
+    InvalidScheme,
+    /// No type specified.
+    TypeUnspecified,
+    /// Invalid characters.
+    InvalidCharacters,
+    /// Invalid indices in multi-part UR.
+    InvalidIndices,
+    /// Tried to decode a single-part UR as multi-part.
+    NotMultiPart,
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::Bytewords(e) => write!(f, "{}", e),
+            Error::Fountain(e) => write!(f, "{}", e),
+            Error::InvalidScheme => write!(f, "Invalid scheme"),
+            Error::TypeUnspecified => write!(f, "No type specified"),
+            Error::InvalidCharacters => write!(f, "Type contains invalid characters"),
+            Error::InvalidIndices => write!(f, "Invalid indices"),
+            Error::NotMultiPart => write!(f, "Can't decode single-part UR as multi-part"),
+        }
+    }
+}
+
+impl From<crate::bytewords::Error> for Error {
+    fn from(e: crate::bytewords::Error) -> Self {
+        Self::Bytewords(e)
+    }
+}
+
+impl From<crate::fountain::Error> for Error {
+    fn from(e: crate::fountain::Error) -> Self {
+        Self::Fountain(e)
+    }
+}
 
 /// Encodes a data payload into a single URI
 ///
@@ -75,7 +116,7 @@ impl Encoder {
         message: &[u8],
         max_fragment_length: usize,
         ur_type: T,
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self, Error> {
         Ok(Self {
             fountain: crate::fountain::Encoder::new(message, max_fragment_length)?,
             ur_type: ur_type.into(),
@@ -91,7 +132,7 @@ impl Encoder {
     /// # Errors
     ///
     /// If serialization fails an error will be returned.
-    pub fn next_part(&mut self) -> anyhow::Result<String> {
+    pub fn next_part(&mut self) -> Result<String, Error> {
         let part = self.fountain.next_part();
         let body = crate::bytewords::encode(&part.cbor()?, crate::bytewords::Style::Minimal);
         Ok(encode_ur(&[self.ur_type.clone(), part.sequence_id(), body]))
@@ -156,26 +197,28 @@ pub enum Kind {
 /// This function errors for invalid inputs, for example
 /// an invalid scheme different from "ur" or an invalid number
 /// of "/" separators.
-pub fn decode(value: &str) -> anyhow::Result<(Kind, Vec<u8>)> {
-    let strip_scheme = value.strip_prefix("ur:").context("Invalid scheme")?;
-    let (type_, strip_type) = strip_scheme.split_once('/').context("No type specified")?;
-    anyhow::ensure!(
-        type_
-            .trim_start_matches(|c: char| c.is_ascii_alphanumeric() || c == '-')
-            .is_empty(),
-        "Type contains invalid characters"
-    );
+pub fn decode(value: &str) -> Result<(Kind, Vec<u8>), Error> {
+    let strip_scheme = value.strip_prefix("ur:").ok_or(Error::InvalidScheme)?;
+    let (type_, strip_type) = strip_scheme.split_once('/').ok_or(Error::TypeUnspecified)?;
+
+    if !type_
+        .trim_start_matches(|c: char| c.is_ascii_alphanumeric() || c == '-')
+        .is_empty()
+    {
+        return Err(Error::InvalidCharacters);
+    }
+
     match strip_type.rsplit_once('/') {
         None => Ok((
             Kind::SinglePart,
             crate::bytewords::decode(strip_type, crate::bytewords::Style::Minimal)?,
         )),
         Some((indices, payload)) => {
-            let (idx, idx_total) = indices.split_once('-').context("Invalid indices")?;
-            anyhow::ensure!(
-                idx.parse::<u16>().is_ok() && idx_total.parse::<u16>().is_ok(),
-                "Invalid indices, must match `<idx>-<len>`"
-            );
+            let (idx, idx_total) = indices.split_once('-').ok_or(Error::InvalidIndices)?;
+            if idx.parse::<u16>().is_err() || idx_total.parse::<u16>().is_err() {
+                return Err(Error::InvalidIndices);
+            }
+
             Ok((
                 Kind::MultiPart,
                 crate::bytewords::decode(payload, crate::bytewords::Style::Minimal)?,
@@ -211,9 +254,12 @@ impl Decoder {
     ///  - The CBOR-encoded fountain part may be inconsistent with previously received ones
     ///
     /// In all these cases, an error will be returned.
-    pub fn receive(&mut self, value: &str) -> anyhow::Result<()> {
+    pub fn receive(&mut self, value: &str) -> Result<(), Error> {
         let (kind, decoded) = decode(value)?;
-        anyhow::ensure!(kind == Kind::MultiPart, "Tried to receive a single-part ur");
+        if kind != Kind::MultiPart {
+            return Err(Error::NotMultiPart);
+        }
+
         self.fountain
             .receive(crate::fountain::Part::from_cbor(decoded.as_slice())?)?;
         Ok(())
@@ -240,8 +286,8 @@ impl Decoder {
     /// See the [`crate::ur`] module documentation for an example.
     ///
     /// [`complete`]: Decoder::complete
-    pub fn message(&self) -> anyhow::Result<Option<Vec<u8>>> {
-        self.fountain.message()
+    pub fn message(&self) -> Result<Option<Vec<u8>>, Error> {
+        self.fountain.message().map_err(Error::from)
     }
 }
 
@@ -347,34 +393,26 @@ mod tests {
 
     #[test]
     fn test_decoder() {
-        assert_eq!(
-            decode("uhr:bytes/aeadaolazmjendeoti")
-                .unwrap_err()
-                .to_string(),
-            "Invalid scheme"
-        );
-        assert_eq!(
-            decode("ur:aeadaolazmjendeoti").unwrap_err().to_string(),
-            "No type specified"
-        );
-        assert_eq!(
-            decode("ur:bytes#4/aeadaolazmjendeoti")
-                .unwrap_err()
-                .to_string(),
-            "Type contains invalid characters"
-        );
-        assert_eq!(
-            decode("ur:bytes/1-1a/aeadaolazmjendeoti")
-                .unwrap_err()
-                .to_string(),
-            "Invalid indices, must match `<idx>-<len>`"
-        );
-        assert_eq!(
-            decode("ur:bytes/1-1/toomuch/aeadaolazmjendeoti")
-                .unwrap_err()
-                .to_string(),
-            "Invalid indices, must match `<idx>-<len>`"
-        );
+        assert!(matches!(
+            decode("uhr:bytes/aeadaolazmjendeoti"),
+            Err(Error::InvalidScheme)
+        ));
+        assert!(matches!(
+            decode("ur:aeadaolazmjendeoti"),
+            Err(Error::TypeUnspecified)
+        ));
+        assert!(matches!(
+            decode("ur:bytes#4/aeadaolazmjendeoti"),
+            Err(Error::InvalidCharacters)
+        ));
+        assert!(matches!(
+            decode("ur:bytes/1-1a/aeadaolazmjendeoti"),
+            Err(Error::InvalidIndices)
+        ));
+        assert!(matches!(
+            decode("ur:bytes/1-1/toomuch/aeadaolazmjendeoti"),
+            Err(Error::InvalidIndices)
+        ));
         decode("ur:bytes/aeadaolazmjendeoti").unwrap();
         decode("ur:whatever-12/aeadaolazmjendeoti").unwrap();
     }
