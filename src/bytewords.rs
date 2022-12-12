@@ -114,20 +114,20 @@ fn decode_from_index(
     indexes: &phf::Map<&'static str, u8>,
 ) -> Result<Vec<u8>, Error> {
     strip_checksum(
-        &keys
-            .map(|k| indexes.get(k).copied())
+        keys.map(|k| indexes.get(k).copied())
             .collect::<Option<Vec<_>>>()
             .ok_or(Error::InvalidWord)?,
     )
 }
 
-fn strip_checksum(data: &[u8]) -> Result<Vec<u8>, Error> {
+fn strip_checksum(mut data: Vec<u8>) -> Result<Vec<u8>, Error> {
     if data.len() < 4 {
         return Err(Error::InvalidChecksum);
     }
     let (payload, checksum) = data.split_at(data.len() - 4);
     if crate::crc32().checksum(payload).to_be_bytes() == checksum {
-        Ok(payload.to_vec())
+        data.truncate(data.len() - 4);
+        Ok(data)
     } else {
         Err(Error::InvalidChecksum)
     }
