@@ -620,9 +620,14 @@ fn choose_fragments(sequence: usize, fragment_count: usize, checksum: u32) -> Ve
     if sequence <= fragment_count {
         return vec![sequence - 1];
     }
+
     #[allow(clippy::cast_possible_truncation)]
-    let mut seed: Vec<u8> = (sequence as u32).to_be_bytes().to_vec();
-    seed.extend((checksum as u32).to_be_bytes().to_vec());
+    let sequence = sequence as u32;
+
+    let mut seed = [0u8; 8];
+    seed[0..4].copy_from_slice(&sequence.to_be_bytes());
+    seed[4..8].copy_from_slice(&checksum.to_be_bytes());
+
     let mut xoshiro = crate::xoshiro::Xoshiro256::from(seed.as_slice());
     let degree = xoshiro.choose_degree(fragment_count);
     let indexes = (0..fragment_count).collect();
