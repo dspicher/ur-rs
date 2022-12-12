@@ -21,11 +21,13 @@ jobs:
     - name: Format
       run: cargo fmt -- --check
     - name: Install crates
-      run: cargo install --debug cargo-sort cargo-rdme
+      run: cargo install --debug cargo-sort cargo-rdme cargo-audit
     - name: Check sorted dependencies
       run: cargo sort --check
     - name: Check README is up-to-date
       run: cargo rdme --check
+    - name: Cargo audit
+      run: cargo audit -D warnings
     - name: Check
       run: cargo check --locked
     - name: Clippy
