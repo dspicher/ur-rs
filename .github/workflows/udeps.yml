@@ -17,6 +17,6 @@ jobs:
           profile: minimal
           toolchain: nightly
           override: true
-      - run: cargo install cargo-udeps
+      - run: cargo install --debug cargo-udeps
       - run: cargo udeps
       - run: cd fuzz && cargo udeps
