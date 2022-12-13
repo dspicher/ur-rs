@@ -35,6 +35,11 @@
 //!    and emits an unbounded stream of parts which can be recombined at the receiving
 //!    decoder side.
 #![forbid(unsafe_code)]
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg_attr(not(feature = "std"), macro_use)]
+#[cfg(not(feature = "std"))]
+extern crate alloc;
 
 pub mod bytewords;
 pub(crate) mod constants;

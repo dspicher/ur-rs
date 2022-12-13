@@ -36,6 +36,13 @@
 //! assert_eq!(data, decode(&encoded, Style::Minimal).unwrap());
 //! ```
 
+#[cfg(not(feature = "std"))]
+use alloc::{string::String, vec::Vec};
+#[cfg(not(feature = "std"))]
+use core::fmt;
+#[cfg(feature = "std")]
+use std::fmt;
+
 /// The three different `bytewords` encoding styles. See the [`encode`] documentation for examples.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Style {
@@ -56,8 +63,8 @@ pub enum Error {
     InvalidChecksum,
 }
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::InvalidWord => write!(f, "invalid word"),
             Error::InvalidChecksum => write!(f, "invalid checksum"),
@@ -65,6 +72,7 @@ impl std::fmt::Display for Error {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::error::Error for Error {}
 
 /// Decodes a `bytewords`-encoded String back into a byte payload. The encoding

@@ -26,6 +26,13 @@
 //! assert_eq!(decoder.message().unwrap().as_deref(), Some(data.as_bytes()));
 //! ```
 
+#[cfg(not(feature = "std"))]
+use alloc::{string::String, vec::Vec};
+#[cfg(not(feature = "std"))]
+use core::fmt;
+#[cfg(feature = "std")]
+use std::fmt;
+
 /// Errors that can happen during encoding and decoding of URs.
 #[derive(Debug)]
 pub enum Error {
@@ -43,8 +50,8 @@ pub enum Error {
     NotMultiPart,
 }
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::Bytewords(e) => write!(f, "{e}"),
             Error::Fountain(e) => write!(f, "{e}"),
@@ -294,7 +301,11 @@ impl Decoder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(not(feature = "std"))]
+    use core::convert::Infallible;
     use minicbor::{bytes::ByteVec, data::Tag};
+    #[cfg(feature = "std")]
+    use std::convert::Infallible;
 
     fn make_message_ur(length: usize, seed: &str) -> Vec<u8> {
         let message = crate::xoshiro::test_utils::make_message(seed, length);
@@ -348,7 +359,7 @@ mod tests {
     fn test_ur_encoder_decoder_bc_crypto_request() {
         // https://github.com/BlockchainCommons/crypto-commons/blob/67ea252f4a7f295bb347cb046796d5b445b3ad3c/Docs/ur-99-request-response.md#the-seed-request
 
-        fn crypto_seed() -> Result<Vec<u8>, minicbor::encode::Error<std::convert::Infallible>> {
+        fn crypto_seed() -> Result<Vec<u8>, minicbor::encode::Error<Infallible>> {
             let mut e = minicbor::Encoder::new(Vec::new());
 
             let uuid = hex::decode("020C223A86F7464693FC650EF3CAC047").unwrap();

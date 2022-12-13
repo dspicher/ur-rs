@@ -1,3 +1,6 @@
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
+
 #[derive(Debug)]
 pub(crate) struct Weighted {
     aliases: Vec<u32>,

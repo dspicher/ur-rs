@@ -82,7 +82,20 @@
 //! );
 //! ```
 
-use std::convert::Infallible;
+#[cfg(not(feature = "std"))]
+use alloc::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    string::String,
+    vec::Vec,
+};
+#[cfg(not(feature = "std"))]
+use core::{convert::Infallible, fmt};
+#[cfg(feature = "std")]
+use std::{
+    collections::{BTreeMap, BTreeSet, VecDeque},
+    convert::Infallible,
+    fmt,
+};
 
 /// Errors that can happen during fountain encoding and decoding.
 #[derive(Debug)]
@@ -105,8 +118,8 @@ pub enum Error {
     InvalidPadding,
 }
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::CborDecode(e) => write!(f, "{e}"),
             Self::CborEncode(e) => write!(f, "{e}"),
@@ -273,10 +286,10 @@ impl Encoder {
 /// See the [`crate::fountain`] module documentation for an example.
 #[derive(Default)]
 pub struct Decoder {
-    decoded: std::collections::HashMap<usize, Part>,
-    received: std::collections::HashSet<Vec<usize>>,
-    buffer: std::collections::HashMap<Vec<usize>, Part>,
-    queue: std::collections::VecDeque<(usize, Part)>,
+    decoded: BTreeMap<usize, Part>,
+    received: BTreeSet<Vec<usize>>,
+    buffer: BTreeMap<Vec<usize>, Part>,
+    queue: VecDeque<(usize, Part)>,
     sequence_count: usize,
     message_length: usize,
     checksum: u32,
