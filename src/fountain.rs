@@ -450,7 +450,7 @@ impl Decoder {
 /// Most commonly, this is obtained by calling [`next_part`] on the encoder.
 ///
 /// [`next_part`]: Encoder::next_part
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Part {
     sequence: usize,
     sequence_count: usize,
@@ -495,20 +495,6 @@ impl<'b, C> minicbor::Decode<'b, C> for Part {
             checksum: d.u32()?,
             data: d.bytes()?.to_vec(),
         })
-    }
-}
-
-impl std::fmt::Display for Part {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "seqNum:{}, seqLen:{}, messageLen:{}, checksum:{}, data:{}",
-            self.sequence,
-            self.sequence_count,
-            self.message_length,
-            self.checksum,
-            hex::encode(&self.data)
-        )
     }
 }
 
@@ -729,31 +715,40 @@ mod tests {
     fn test_fountain_encoder() {
         let message = crate::xoshiro::test_utils::make_message("Wolf", 256);
         let mut encoder = Encoder::new(&message, 30).unwrap();
-        let expected_parts = vec![
-            "seqNum:1, seqLen:9, messageLen:256, checksum:23570951, data:916ec65cf77cadf55cd7f9cda1a1030026ddd42e905b77adc36e4f2d3c",
-            "seqNum:2, seqLen:9, messageLen:256, checksum:23570951, data:cba44f7f04f2de44f42d84c374a0e149136f25b01852545961d55f7f7a",
-            "seqNum:3, seqLen:9, messageLen:256, checksum:23570951, data:8cde6d0e2ec43f3b2dcb644a2209e8c9e34af5c4747984a5e873c9cf5f",
-            "seqNum:4, seqLen:9, messageLen:256, checksum:23570951, data:965e25ee29039fdf8ca74f1c769fc07eb7ebaec46e0695aea6cbd60b3e",
-            "seqNum:5, seqLen:9, messageLen:256, checksum:23570951, data:c4bbff1b9ffe8a9e7240129377b9d3711ed38d412fbb4442256f1e6f59",
-            "seqNum:6, seqLen:9, messageLen:256, checksum:23570951, data:5e0fc57fed451fb0a0101fb76b1fb1e1b88cfdfdaa946294a47de8fff1",
-            "seqNum:7, seqLen:9, messageLen:256, checksum:23570951, data:73f021c0e6f65b05c0a494e50791270a0050a73ae69b6725505a2ec8a5",
-            "seqNum:8, seqLen:9, messageLen:256, checksum:23570951, data:791457c9876dd34aadd192a53aa0dc66b556c0c215c7ceb8248b717c22",
-            "seqNum:9, seqLen:9, messageLen:256, checksum:23570951, data:951e65305b56a3706e3e86eb01c803bbf915d80edcd64d4d0000000000",
-            "seqNum:10, seqLen:9, messageLen:256, checksum:23570951, data:330f0f33a05eead4f331df229871bee733b50de71afd2e5a79f196de09",
-            "seqNum:11, seqLen:9, messageLen:256, checksum:23570951, data:3b205ce5e52d8c24a52cffa34c564fa1af3fdffcd349dc4258ee4ee828",
-            "seqNum:12, seqLen:9, messageLen:256, checksum:23570951, data:dd7bf725ea6c16d531b5f03254783803048ca08b87148daacd1cd7a006",
-            "seqNum:13, seqLen:9, messageLen:256, checksum:23570951, data:760be7ad1c6187902bbc04f539b9ee5eb8ea6833222edea36031306c01",
-            "seqNum:14, seqLen:9, messageLen:256, checksum:23570951, data:5bf4031217d2c3254b088fa7553778b5003632f46e21db129416f65b55",
-            "seqNum:15, seqLen:9, messageLen:256, checksum:23570951, data:73f021c0e6f65b05c0a494e50791270a0050a73ae69b6725505a2ec8a5",
-            "seqNum:16, seqLen:9, messageLen:256, checksum:23570951, data:b8546ebfe2048541348910267331c643133f828afec9337c318f71b7df",
-            "seqNum:17, seqLen:9, messageLen:256, checksum:23570951, data:23dedeea74e3a0fb052befabefa13e2f80e4315c9dceed4c8630612e64",
-            "seqNum:18, seqLen:9, messageLen:256, checksum:23570951, data:d01a8daee769ce34b6b35d3ca0005302724abddae405bdb419c0a6b208",
-            "seqNum:19, seqLen:9, messageLen:256, checksum:23570951, data:3171c5dc365766eff25ae47c6f10e7de48cfb8474e050e5fe997a6dc24",
-            "seqNum:20, seqLen:9, messageLen:256, checksum:23570951, data:e055c2433562184fa71b4be94f262e200f01c6f74c284b0dc6fae6673f"
-        ];
+        let expected_parts = [
+            "916ec65cf77cadf55cd7f9cda1a1030026ddd42e905b77adc36e4f2d3c",
+            "cba44f7f04f2de44f42d84c374a0e149136f25b01852545961d55f7f7a",
+            "8cde6d0e2ec43f3b2dcb644a2209e8c9e34af5c4747984a5e873c9cf5f",
+            "965e25ee29039fdf8ca74f1c769fc07eb7ebaec46e0695aea6cbd60b3e",
+            "c4bbff1b9ffe8a9e7240129377b9d3711ed38d412fbb4442256f1e6f59",
+            "5e0fc57fed451fb0a0101fb76b1fb1e1b88cfdfdaa946294a47de8fff1",
+            "73f021c0e6f65b05c0a494e50791270a0050a73ae69b6725505a2ec8a5",
+            "791457c9876dd34aadd192a53aa0dc66b556c0c215c7ceb8248b717c22",
+            "951e65305b56a3706e3e86eb01c803bbf915d80edcd64d4d0000000000",
+            "330f0f33a05eead4f331df229871bee733b50de71afd2e5a79f196de09",
+            "3b205ce5e52d8c24a52cffa34c564fa1af3fdffcd349dc4258ee4ee828",
+            "dd7bf725ea6c16d531b5f03254783803048ca08b87148daacd1cd7a006",
+            "760be7ad1c6187902bbc04f539b9ee5eb8ea6833222edea36031306c01",
+            "5bf4031217d2c3254b088fa7553778b5003632f46e21db129416f65b55",
+            "73f021c0e6f65b05c0a494e50791270a0050a73ae69b6725505a2ec8a5",
+            "b8546ebfe2048541348910267331c643133f828afec9337c318f71b7df",
+            "23dedeea74e3a0fb052befabefa13e2f80e4315c9dceed4c8630612e64",
+            "d01a8daee769ce34b6b35d3ca0005302724abddae405bdb419c0a6b208",
+            "3171c5dc365766eff25ae47c6f10e7de48cfb8474e050e5fe997a6dc24",
+            "e055c2433562184fa71b4be94f262e200f01c6f74c284b0dc6fae6673f",
+        ]
+        .iter()
+        .enumerate()
+        .map(|(i, data)| super::Part {
+            sequence: i + 1,
+            sequence_count: 9,
+            message_length: 256,
+            checksum: 23_570_951,
+            data: hex::decode(data).unwrap(),
+        });
         for (sequence, e) in expected_parts.into_iter().enumerate() {
             assert_eq!(encoder.current_sequence(), sequence);
-            assert_eq!(encoder.next_part().to_string(), e);
+            assert_eq!(encoder.next_part(), e);
         }
     }
 
