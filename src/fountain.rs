@@ -209,10 +209,12 @@ impl Encoder {
     pub fn next_part(&mut self) -> Part {
         self.current_sequence += 1;
         let indexes = choose_fragments(self.current_sequence, self.parts.len(), self.checksum);
-        let init = vec![0; self.parts.get(0).unwrap().len()];
-        let mixed = indexes.into_iter().fold(init, |acc, item| {
-            xor(acc.as_slice(), self.parts.get(item).unwrap())
-        });
+
+        let mut mixed = vec![0; self.parts.get(0).unwrap().len()];
+        for item in indexes {
+            xor(&mut mixed, self.parts.get(item).unwrap());
+        }
+
         Part {
             sequence: self.current_sequence,
             sequence_count: self.parts.len(),
@@ -341,7 +343,7 @@ impl Decoder {
                     .position(|&x| x == index)
                     .ok_or(Error::ExpectedItem)?;
                 new_indexes.remove(to_remove);
-                part.data = xor(&part.data, &simple.data);
+                xor(&mut part.data, &simple.data);
                 if new_indexes.len() == 1 {
                     self.decoded
                         .insert(*new_indexes.first().unwrap(), part.clone());
@@ -370,8 +372,8 @@ impl Decoder {
                 .position(|&x| x == remove)
                 .ok_or(Error::ExpectedItem)?;
             indexes.remove(idx_to_remove);
-            part.data = xor(
-                &part.data,
+            xor(
+                &mut part.data,
                 &self.decoded.get(&remove).ok_or(Error::ExpectedItem)?.data,
             );
         }
@@ -649,9 +651,12 @@ fn choose_fragments(sequence: usize, fragment_count: usize, checksum: u32) -> Ve
     shuffled
 }
 
-#[must_use]
-fn xor(v1: &[u8], v2: &[u8]) -> Vec<u8> {
-    v1.iter().zip(v2.iter()).map(|(&x1, &x2)| x1 ^ x2).collect()
+fn xor(v1: &mut [u8], v2: &[u8]) {
+    debug_assert_eq!(v1.len(), v2.len());
+
+    for (x1, &x2) in v1.iter_mut().zip(v2.iter()) {
+        *x1 ^= x2;
+    }
 }
 
 #[cfg(test)]
@@ -750,13 +755,19 @@ mod tests {
     #[test]
     fn test_xor() {
         let mut rng = crate::xoshiro::Xoshiro256::from("Wolf");
+
         let data1 = rng.next_bytes(10);
         assert_eq!(hex::encode(&data1), "916ec65cf77cadf55cd7");
+
         let data2 = rng.next_bytes(10);
         assert_eq!(hex::encode(&data2), "f9cda1a1030026ddd42e");
-        let data3 = xor(&data1, &data2);
+
+        let mut data3 = data1.clone();
+        xor(&mut data3, &data2);
         assert_eq!(hex::encode(&data3), "68a367fdf47c8b2888f9");
-        assert_eq!(hex::encode(xor(&data3, &data1)), hex::encode(data2));
+
+        xor(&mut data3, &data1);
+        assert_eq!(hex::encode(data3), hex::encode(data2));
     }
 
     #[test]
