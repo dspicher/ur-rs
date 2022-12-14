@@ -599,13 +599,26 @@ impl Part {
     }
 }
 
+/// Calculates the quotient of `a` and `b`, rounding the results towards
+/// positive infinity.
+///
+/// Note: there's an implementation on the `usize` type of this function,
+/// but it's not stable yet.
 #[must_use]
-#[allow(clippy::cast_possible_truncation)]
-#[allow(clippy::cast_precision_loss)]
-#[allow(clippy::cast_sign_loss)]
+fn div_ceil(a: usize, b: usize) -> usize {
+    let d = a / b;
+    let r = a % b;
+    if r > 0 {
+        d + 1
+    } else {
+        d
+    }
+}
+
+#[must_use]
 pub(crate) fn fragment_length(data_length: usize, max_fragment_length: usize) -> usize {
-    let fragment_count = data_length / max_fragment_length + 1;
-    (data_length as f64 / fragment_count as f64).ceil() as usize
+    let fragment_count = div_ceil(data_length, max_fragment_length);
+    div_ceil(data_length, fragment_count)
 }
 
 #[must_use]
