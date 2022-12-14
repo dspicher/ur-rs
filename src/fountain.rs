@@ -676,6 +676,11 @@ mod tests {
     fn test_fragment_length() {
         assert_eq!(fragment_length(12345, 1955), 1764);
         assert_eq!(fragment_length(12345, 30000), 12345);
+
+        assert_eq!(fragment_length(10, 4), 4);
+        assert_eq!(fragment_length(10, 5), 5);
+        assert_eq!(fragment_length(10, 6), 5);
+        assert_eq!(fragment_length(10, 10), 10);
     }
 
     #[test]
