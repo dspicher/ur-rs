@@ -93,6 +93,8 @@ pub enum Error {
     CborEncode(minicbor::encode::Error<Infallible>),
     /// Expected non-empty message.
     EmptyMessage,
+    /// Expected non-empty part.
+    EmptyPart,
     /// Fragment length should be a positive integer greater than 0.
     InvalidFragmentLen,
     /// Received part is inconsistent with previous ones.
@@ -109,6 +111,7 @@ impl std::fmt::Display for Error {
             Self::CborDecode(e) => write!(f, "{}", e),
             Self::CborEncode(e) => write!(f, "{}", e),
             Self::EmptyMessage => write!(f, "expected non-empty message"),
+            Self::EmptyPart => write!(f, "expected non-empty part"),
             Self::InvalidFragmentLen => write!(f, "expected positive maximum fragment length"),
             Self::InconsistentPart => write!(f, "part is inconsistent with previous ones"),
             Self::ExpectedItem => write!(f, "expected item"),
@@ -297,6 +300,12 @@ impl Decoder {
         if self.complete() {
             return Ok(false);
         }
+
+        // Only receive parts that will yield data.
+        if part.sequence_count == 0 || part.data.is_empty() || part.message_length == 0 {
+            return Err(Error::EmptyPart);
+        }
+
         if self.received.is_empty() {
             self.sequence_count = part.sequence_count;
             self.message_length = part.message_length;
@@ -956,6 +965,45 @@ mod tests {
         assert!(!decoder.validate(&part));
         part.sequence_count -= 1;
         part.data.push(1);
+        assert!(!decoder.validate(&part));
+    }
+
+    #[test]
+    fn test_empty_decoder_empty_part() {
+        let mut decoder = Decoder::default();
+        let mut part = Part {
+            sequence: 12,
+            sequence_count: 8,
+            message_length: 100,
+            checksum: 0x1234_5678,
+            data: vec![1, 5, 3, 3, 5],
+        };
+
+        // Check sequence_count.
+        part.sequence_count = 0;
+        assert!(matches!(
+            decoder.receive(part.clone()),
+            Err(Error::EmptyPart)
+        ));
+        part.sequence_count = 8;
+
+        // Check message_length.
+        part.message_length = 0;
+        assert!(matches!(
+            decoder.receive(part.clone()),
+            Err(Error::EmptyPart)
+        ));
+        part.message_length = 100;
+
+        // Check data.
+        part.data = vec![];
+        assert!(matches!(
+            decoder.receive(part.clone()),
+            Err(Error::EmptyPart)
+        ));
+        part.data = vec![1, 5, 3, 3, 5];
+
+        // Should not validate as there aren't any previous parts received.
         assert!(!decoder.validate(&part));
     }
 
