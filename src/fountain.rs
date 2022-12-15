@@ -425,6 +425,10 @@ impl Decoder {
     /// ```
     #[must_use]
     pub fn validate(&self, part: &Part) -> bool {
+        if self.received.is_empty() {
+            return false;
+        }
+
         if part.sequence_count != self.sequence_count {
             return false;
         }
@@ -437,6 +441,7 @@ impl Decoder {
         if part.data.len() != self.fragment_length {
             return false;
         }
+
         true
     }
 
