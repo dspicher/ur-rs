@@ -438,16 +438,11 @@ impl Decoder {
             return false;
         }
 
-        if part.sequence_count != self.sequence_count {
-            return false;
-        }
-        if part.message_length != self.message_length {
-            return false;
-        }
-        if part.checksum != self.checksum {
-            return false;
-        }
-        if part.data.len() != self.fragment_length {
+        if part.sequence_count != self.sequence_count
+            || part.message_length != self.message_length
+            || part.checksum != self.checksum
+            || part.data.len() != self.fragment_length
+        {
             return false;
         }
 
