@@ -890,7 +890,7 @@ mod tests {
     }
 
     #[test]
-    fn test_empty_decoder() {
+    fn test_empty_encoder() {
         assert!(Encoder::new(&[], 1).is_err());
     }
 
