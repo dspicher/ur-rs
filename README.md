@@ -1,6 +1,6 @@
 Rust Uniform Resources
 ======================
-[<img alt="build status" src="https://img.shields.io/github/workflow/status/dspicher/ur-rs/Rust/master?logo=github" height="20">](https://github.com/dspicher/ur-rs/actions)
+[<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/dspicher/ur-rs/rust.yml?branch=master&logo=github" height="20">](https://github.com/dspicher/ur-rs/actions)
 [<img alt="build status" src="https://img.shields.io/codecov/c/gh/dspicher/ur-rs?logo=codecov" height="20">](https://codecov.io/gh/dspicher/ur-rs)
 [<img alt="build status" src="https://img.shields.io/crates/v/ur.svg" height="20">](https://crates.io/crates/ur)
 
