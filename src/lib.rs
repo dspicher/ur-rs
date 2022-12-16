@@ -34,6 +34,7 @@
 //!    of a fountain encoder, which splits up a byte payload into multiple segments
 //!    and emits an unbounded stream of parts which can be recombined at the receiving
 //!    decoder side.
+#![forbid(unsafe_code)]
 
 pub mod bytewords;
 pub(crate) mod constants;
