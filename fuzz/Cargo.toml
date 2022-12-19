@@ -8,6 +8,10 @@ honggfuzz = "0.5.55"
 ur = { path = ".." }
 
 [[bin]]
+name = "bytewords_decode"
+path = "fuzz_targets/bytewords_decode.rs"
+
+[[bin]]
 name = "bytewords_encode"
 path = "fuzz_targets/bytewords_encode.rs"
 
