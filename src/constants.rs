@@ -1,7 +1,7 @@
 use phf::phf_map;
 
 #[rustfmt::skip]
-pub(crate) const WORDS: [&str; 256] = [
+pub const WORDS: [&str; 256] = [
     "able", "acid", "also", "apex", "aqua", "arch", "atom", "aunt",
     "away", "axis", "back", "bald", "barn", "belt", "beta", "bias",
     "blue", "body", "brag", "brew", "bulb", "buzz", "calm", "cash",
@@ -36,7 +36,7 @@ pub(crate) const WORDS: [&str; 256] = [
     "yoga", "yurt", "zaps", "zero", "zest", "zinc", "zone", "zoom",
 ];
 
-pub(crate) static WORD_IDXS: phf::Map<&'static str, u8> = phf_map! {
+pub static WORD_IDXS: phf::Map<&'static str, u8> = phf_map! {
     "able" => 0,
     "acid" => 1,
     "also" => 2,
@@ -296,7 +296,7 @@ pub(crate) static WORD_IDXS: phf::Map<&'static str, u8> = phf_map! {
 };
 
 #[rustfmt::skip]
-pub(crate) const MINIMALS: [&str; 256] = [
+pub const MINIMALS: [&str; 256] = [
     "ae", "ad", "ao", "ax", "aa", "ah", "am", "at",
     "ay", "as", "bk", "bd", "bn", "bt", "ba", "bs",
     "be", "by", "bg", "bw", "bb", "bz", "cm", "ch",
@@ -331,7 +331,7 @@ pub(crate) const MINIMALS: [&str; 256] = [
     "ya", "yt", "zs", "zo", "zt", "zc", "ze", "zm",
 ];
 
-pub(crate) static MINIMAL_IDXS: phf::Map<&'static str, u8> = phf_map! {
+pub static MINIMAL_IDXS: phf::Map<&'static str, u8> = phf_map! {
     "ae" => 0,
     "ad" => 1,
     "ao" => 2,

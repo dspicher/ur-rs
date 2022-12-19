@@ -37,11 +37,12 @@
 #![forbid(unsafe_code)]
 
 pub mod bytewords;
-pub(crate) mod constants;
 pub mod fountain;
-pub(crate) mod sampler;
 pub mod ur;
-pub(crate) mod xoshiro;
+
+mod constants;
+mod sampler;
+mod xoshiro;
 
 pub use self::ur::decode;
 pub use self::ur::encode;
