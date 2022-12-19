@@ -14,11 +14,9 @@ fn main() {
             .quiet_zone(false)
             .module_dimensions(2, 1)
             .build();
+        stdout.write_all(format!("{string}\n").as_bytes()).unwrap();
         stdout
-            .write_all(format!("{}\n", string).as_bytes())
-            .unwrap();
-        stdout
-            .write_all(format!("{}\n\n\n\n", ur).as_bytes())
+            .write_all(format!("{ur}\n\n\n\n").as_bytes())
             .unwrap();
         stdout.flush().unwrap();
         std::thread::sleep(std::time::Duration::from_millis(1000));

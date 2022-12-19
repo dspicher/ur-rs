@@ -46,8 +46,8 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Bytewords(e) => write!(f, "{}", e),
-            Error::Fountain(e) => write!(f, "{}", e),
+            Error::Bytewords(e) => write!(f, "{e}"),
+            Error::Fountain(e) => write!(f, "{e}"),
             Error::InvalidScheme => write!(f, "Invalid scheme"),
             Error::TypeUnspecified => write!(f, "No type specified"),
             Error::InvalidCharacters => write!(f, "Type contains invalid characters"),

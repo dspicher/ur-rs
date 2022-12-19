@@ -108,8 +108,8 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::CborDecode(e) => write!(f, "{}", e),
-            Self::CborEncode(e) => write!(f, "{}", e),
+            Self::CborDecode(e) => write!(f, "{e}"),
+            Self::CborEncode(e) => write!(f, "{e}"),
             Self::EmptyMessage => write!(f, "expected non-empty message"),
             Self::EmptyPart => write!(f, "expected non-empty part"),
             Self::InvalidFragmentLen => write!(f, "expected positive maximum fragment length"),
@@ -511,7 +511,7 @@ impl<C> minicbor::Encode<C> for Part {
             .u32(self.sequence as u32)?
             .u32(self.sequence_count as u32)?
             .u32(self.message_length as u32)?
-            .u32(self.checksum as u32)?
+            .u32(self.checksum)?
             .bytes(&self.data)?;
 
         Ok(())
