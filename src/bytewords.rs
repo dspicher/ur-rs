@@ -103,8 +103,8 @@ pub fn decode(encoded: &str, style: Style) -> Result<Vec<u8>, Error> {
     }
 
     let separator = match style {
-        Style::Standard => " ",
-        Style::Uri => "-",
+        Style::Standard => ' ',
+        Style::Uri => '-',
         Style::Minimal => return decode_minimal(encoded),
     };
     decode_from_index(&mut encoded.split(separator), &crate::constants::WORD_IDXS)
