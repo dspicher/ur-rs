@@ -213,9 +213,9 @@ impl Encoder {
         self.current_sequence += 1;
         let indexes = choose_fragments(self.current_sequence, self.parts.len(), self.checksum);
 
-        let mut mixed = vec![0; self.parts.get(0).unwrap().len()];
+        let mut mixed = vec![0; self.parts[0].len()];
         for item in indexes {
-            xor(&mut mixed, self.parts.get(item).unwrap());
+            xor(&mut mixed, &self.parts[item]);
         }
 
         Part {
@@ -708,11 +708,8 @@ mod tests {
             "170010067e2e75ebe2d2904aeb1f89d5dc98cd4a6f2faaa8be6d03354c990fd895a97feb54668473e9d942bb99e196d897e8f1b01625cf48a7b78d249bb4985c065aa8cd1402ed2ba1b6f908f63dcd84b66425df00000000000000000000"
         ];
         assert_eq!(fragments.len(), expected_fragments.len());
-        for i in 0..fragments.len() {
-            assert_eq!(
-                hex::encode(fragments.get(i).unwrap()),
-                *expected_fragments.get(i).unwrap()
-            );
+        for (fragment, expected_fragment) in fragments.iter().zip(expected_fragments) {
+            assert_eq!(hex::encode(fragment), expected_fragment);
         }
         let rejoined = join(fragments, message.len());
         assert_eq!(rejoined, message);
@@ -759,10 +756,7 @@ mod tests {
         for seq_num in 1..=30 {
             let mut indexes = crate::fountain::choose_fragments(seq_num, fragments.len(), checksum);
             indexes.sort_unstable();
-            assert_eq!(
-                indexes,
-                *expected_fragment_indexes.get(seq_num - 1).unwrap()
-            );
+            assert_eq!(indexes, expected_fragment_indexes[seq_num - 1]);
         }
     }
 

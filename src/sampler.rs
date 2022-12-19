@@ -20,7 +20,7 @@ impl Weighted {
         }
         let (mut s, mut l): (Vec<usize>, Vec<usize>) = (1..=count)
             .map(|j| count - j)
-            .partition(|&j| *weights.get(j).unwrap() < 1.0);
+            .partition(|&j| weights[j] < 1.0);
 
         let mut probs: Vec<f64> = vec![0.0; count];
         let mut aliases: Vec<u32> = vec![0; count];
@@ -28,10 +28,10 @@ impl Weighted {
         while !s.is_empty() && !l.is_empty() {
             let a = s.remove(s.len() - 1);
             let g = l.remove(l.len() - 1);
-            *probs.get_mut(a).unwrap() = *weights.get(a).unwrap();
-            *aliases.get_mut(a).unwrap() = g as u32;
-            *weights.get_mut(g).unwrap() += *weights.get(a).unwrap() - 1.0;
-            if *weights.get(g).unwrap() < 1.0 {
+            probs[a] = weights[a];
+            aliases[a] = g as u32;
+            weights[g] += weights[a] - 1.0;
+            if weights[g] < 1.0 {
                 s.push(g);
             } else {
                 l.push(g);
@@ -40,12 +40,12 @@ impl Weighted {
 
         while !l.is_empty() {
             let g = l.remove(l.len() - 1);
-            *probs.get_mut(g).unwrap() = 1.0;
+            probs[g] = 1.0;
         }
 
         while !s.is_empty() {
             let a = s.remove(s.len() - 1);
-            *probs.get_mut(a).unwrap() = 1.0;
+            probs[a] = 1.0;
         }
 
         Self { aliases, probs }
@@ -57,10 +57,10 @@ impl Weighted {
         let r2 = xoshiro.next_double();
         let n = self.probs.len();
         let i = (n as f64 * r1) as usize;
-        if r2 < *self.probs.get(i).unwrap() {
+        if r2 < self.probs[i] {
             i as u32
         } else {
-            *self.aliases.get(i).unwrap()
+            self.aliases[i]
         }
     }
 }
@@ -119,7 +119,7 @@ mod tests {
             let mut xoshiro = crate::xoshiro::Xoshiro256::from(format!("Wolf-{nonce}").as_str());
             assert_eq!(
                 xoshiro.choose_degree(fragments.len()),
-                *expected_degrees.get(nonce - 1).unwrap()
+                expected_degrees[nonce - 1]
             );
         }
     }
