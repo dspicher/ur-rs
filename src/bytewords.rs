@@ -54,6 +54,10 @@ pub enum Error {
     InvalidWord,
     /// The CRC32 checksum doesn't validate.
     InvalidChecksum,
+    /// Invalid bytewords string length.
+    InvalidLength,
+    /// The bytewords string contains non-ASCII characters.
+    NonAscii,
 }
 
 impl std::fmt::Display for Error {
@@ -61,6 +65,8 @@ impl std::fmt::Display for Error {
         match self {
             Error::InvalidWord => write!(f, "invalid word"),
             Error::InvalidChecksum => write!(f, "invalid checksum"),
+            Error::InvalidLength => write!(f, "invalid length"),
+            Error::NonAscii => write!(f, "bytewords string contains non-ASCII characters"),
         }
     }
 }
@@ -92,6 +98,10 @@ impl std::error::Error for Error {}
 /// the provided `style`, or contains an invalid checksum, an error will be
 /// returned.
 pub fn decode(encoded: &str, style: Style) -> Result<Vec<u8>, Error> {
+    if !encoded.is_ascii() {
+        return Err(Error::NonAscii);
+    }
+
     let separator = match style {
         Style::Standard => " ",
         Style::Uri => "-",
@@ -101,6 +111,10 @@ pub fn decode(encoded: &str, style: Style) -> Result<Vec<u8>, Error> {
 }
 
 fn decode_minimal(encoded: &str) -> Result<Vec<u8>, Error> {
+    if encoded.len() % 2 != 0 {
+        return Err(Error::InvalidLength);
+    }
+
     decode_from_index(
         &mut (0..encoded.len())
             .step_by(2)
@@ -228,6 +242,17 @@ mod tests {
             Error::InvalidChecksum
         );
         assert_eq!(decode("", Style::Standard).unwrap_err(), Error::InvalidWord);
+
+        // invalid length
+        assert_eq!(
+            decode("aea", Style::Minimal).unwrap_err(),
+            Error::InvalidLength
+        );
+
+        // non ASCII
+        assert_eq!(decode("₿", Style::Standard).unwrap_err(), Error::NonAscii);
+        assert_eq!(decode("₿", Style::Uri).unwrap_err(), Error::NonAscii);
+        assert_eq!(decode("₿", Style::Minimal).unwrap_err(), Error::NonAscii);
     }
 
     #[test]
