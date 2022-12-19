@@ -4,7 +4,7 @@ use rand_xoshiro::rand_core::SeedableRng;
 use rand_xoshiro::Xoshiro256StarStar;
 
 #[allow(clippy::module_name_repetitions)]
-pub(crate) struct Xoshiro256 {
+pub struct Xoshiro256 {
     inner: Xoshiro256StarStar,
 }
 
@@ -25,20 +25,20 @@ impl From<&[u8]> for Xoshiro256 {
 #[allow(clippy::cast_possible_truncation)]
 impl Xoshiro256 {
     #[allow(clippy::should_implement_trait)]
-    pub(crate) fn next(&mut self) -> u64 {
+    pub fn next(&mut self) -> u64 {
         self.inner.next_u64()
     }
 
-    pub(crate) fn next_double(&mut self) -> f64 {
+    pub fn next_double(&mut self) -> f64 {
         self.next() as f64 / (u64::MAX as f64 + 1.0)
     }
 
     #[allow(clippy::cast_sign_loss)]
-    pub(crate) fn next_int(&mut self, low: u64, high: u64) -> u64 {
+    pub fn next_int(&mut self, low: u64, high: u64) -> u64 {
         (self.next_double() * ((high - low + 1) as f64)) as u64 + low
     }
 
-    pub(crate) fn shuffled<T>(&mut self, mut items: Vec<T>) -> Vec<T> {
+    pub fn shuffled<T>(&mut self, mut items: Vec<T>) -> Vec<T> {
         let mut shuffled = Vec::<T>::with_capacity(items.len());
         while !items.is_empty() {
             let index = self.next_int(0, (items.len() - 1) as u64) as usize;
@@ -48,7 +48,7 @@ impl Xoshiro256 {
         shuffled
     }
 
-    pub(crate) fn choose_degree(&mut self, length: usize) -> u32 {
+    pub fn choose_degree(&mut self, length: usize) -> u32 {
         let degree_weights: Vec<f64> = (1..=length).map(|x| 1.0 / x as f64).collect();
         let mut sampler = crate::sampler::Weighted::new(degree_weights);
         sampler.next(self) + 1

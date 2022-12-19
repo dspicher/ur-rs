@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub(crate) struct Weighted {
+pub struct Weighted {
     aliases: Vec<u32>,
     probs: Vec<f64>,
 }
@@ -7,7 +7,7 @@ pub(crate) struct Weighted {
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_precision_loss)]
 impl Weighted {
-    pub(crate) fn new(mut weights: Vec<f64>) -> Self {
+    pub fn new(mut weights: Vec<f64>) -> Self {
         assert!(
             !weights.iter().any(|&p| p < 0.0),
             "negative probability encountered"
@@ -52,7 +52,7 @@ impl Weighted {
     }
 
     #[allow(clippy::cast_sign_loss)]
-    pub(crate) fn next(&mut self, xoshiro: &mut crate::xoshiro::Xoshiro256) -> u32 {
+    pub fn next(&mut self, xoshiro: &mut crate::xoshiro::Xoshiro256) -> u32 {
         let r1 = xoshiro.next_double();
         let r2 = xoshiro.next_double();
         let n = self.probs.len();
