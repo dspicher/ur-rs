@@ -116,7 +116,7 @@ mod tests {
             3, 4, 10,
         ];
         for nonce in 1..=200 {
-            let mut xoshiro = crate::xoshiro::Xoshiro256::from(format!("Wolf-{}", nonce).as_str());
+            let mut xoshiro = crate::xoshiro::Xoshiro256::from(format!("Wolf-{nonce}").as_str());
             assert_eq!(
                 xoshiro.choose_degree(fragments.len()),
                 *expected_degrees.get(nonce - 1).unwrap()
