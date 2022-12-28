@@ -1,3 +1,6 @@
+[workspace]
+members = ["fuzz"]
+
 [package]
 name = "ur"
 description = "A Rust implementation of Uniform Resources"
