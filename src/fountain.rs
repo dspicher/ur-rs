@@ -1026,43 +1026,45 @@ mod tests {
         // but implies a following value
         assert!(matches!(
             Part::from_cbor(&[0x18]),
-            Err(Error::CborDecode(_))
+            Err(Error::CborDecode(e)) if e.to_string() == "unexpected type u8 at position 0: expected array"
         ));
         // the top-level item must be an array
-        assert!(matches!(Part::from_cbor(&[0x1]), Err(Error::CborDecode(_))));
+        assert!(
+            matches!(Part::from_cbor(&[0x1]), Err(Error::CborDecode(e)) if e.to_string() == "unexpected type u8 at position 0: expected array")
+        );
         // the array must be of length five
         assert!(matches!(
             Part::from_cbor(&[0x84, 0x1, 0x2, 0x3, 0x4]),
-            Err(Error::CborDecode(_))
+            Err(Error::CborDecode(e)) if e.to_string() == "decode error: invalid CBOR array length"
         ));
         assert!(matches!(
             Part::from_cbor(&[0x86, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6]),
-            Err(Error::CborDecode(_))
+            Err(Error::CborDecode(e)) if e.to_string() == "decode error: invalid CBOR array length"
         ));
         // the first item must be an unsigned integer
         assert!(matches!(
             Part::from_cbor(&[0x85, 0x41, 0x1, 0x2, 0x3, 0x4, 0x41, 0x1]),
-            Err(Error::CborDecode(_))
+            Err(Error::CborDecode(e)) if e.to_string() == "unexpected type bytes at position 1: expected u32"
         ));
         // the second item must be an unsigned integer
         assert!(matches!(
             Part::from_cbor(&[0x85, 0x1, 0x41, 0x2, 0x3, 0x4, 0x41, 0x1]),
-            Err(Error::CborDecode(_))
+            Err(Error::CborDecode(e)) if e.to_string() == "unexpected type bytes at position 2: expected u32"
         ));
         // the third item must be an unsigned integer
         assert!(matches!(
             Part::from_cbor(&[0x85, 0x1, 0x2, 0x41, 0x3, 0x4, 0x41, 0x1]),
-            Err(Error::CborDecode(_))
+            Err(Error::CborDecode(e)) if e.to_string() == "unexpected type bytes at position 3: expected u32"
         ));
         // the fourth item must be an unsigned integer
         assert!(matches!(
             Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x41, 0x4, 0x41, 0x1]),
-            Err(Error::CborDecode(_))
+            Err(Error::CborDecode(e)) if e.to_string() == "unexpected type bytes at position 4: expected u32"
         ));
         // the fifth item must be byte string
         assert!(matches!(
             Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x4, 0x5]),
-            Err(Error::CborDecode(_))
+            Err(Error::CborDecode(e)) if e.to_string() == "unexpected type u8 at position 5: expected bytes (definite length)"
         ));
         Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x4, 0x41, 0x5]).unwrap();
     }
@@ -1088,28 +1090,28 @@ mod tests {
                 0x85, 0x1b, 0x1, 0x2, 0x3, 0x4, 0xa, 0xb, 0xc, 0xd, 0x1a, 0x5, 0x6, 0x7, 0x8, 0x1a,
                 0x9, 0x10, 0x11, 0x12, 0x1a, 0x13, 0x14, 0x15, 0x16, 0x41, 0x5,
             ]),
-            Err(Error::CborDecode(_))
+            Err(Error::CborDecode(e)) if e.to_string().contains("converting u64 to u32")
         ));
         assert!(matches!(
             Part::from_cbor(&[
                 0x85, 0x1a, 0x1, 0x2, 0x3, 0x4, 0x1b, 0x5, 0x6, 0x7, 0x8, 0xa, 0xb, 0xc, 0xd, 0x1a,
                 0x9, 0x10, 0x11, 0x12, 0x1a, 0x13, 0x14, 0x15, 0x16, 0x41, 0x5,
             ]),
-            Err(Error::CborDecode(_))
+            Err(Error::CborDecode(e)) if e.to_string().contains("converting u64 to u32")
         ));
         assert!(matches!(
             Part::from_cbor(&[
                 0x85, 0x1a, 0x1, 0x2, 0x3, 0x4, 0x1a, 0x5, 0x6, 0x7, 0x8, 0x1b, 0x9, 0x10, 0x11,
                 0x12, 0xa, 0xb, 0xc, 0xd, 0x1a, 0x13, 0x14, 0x15, 0x16, 0x41, 0x5,
             ]),
-            Err(Error::CborDecode(_))
+            Err(Error::CborDecode(e)) if e.to_string().contains("converting u64 to u32")
         ));
         assert!(matches!(
             Part::from_cbor(&[
                 0x85, 0x1a, 0x1, 0x2, 0x3, 0x4, 0x1a, 0x5, 0x6, 0x7, 0x8, 0x1a, 0x9, 0x10, 0x11,
                 0x12, 0x1b, 0x13, 0x14, 0x15, 0x16, 0xa, 0xb, 0xc, 0xd, 0x41, 0x5,
             ]),
-            Err(Error::CborDecode(_))
+            Err(Error::CborDecode(e)) if e.to_string().contains("converting u64 to u32")
         ));
     }
 }
