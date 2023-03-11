@@ -51,7 +51,7 @@ The following useful building blocks are also part of the public API:
 Add `ur` to the dependencies of your `Cargo.toml`:
 ```toml
 [dependencies]
-ur = "0.2"
+ur = "0.3"
 ```
 
 ## Examples
