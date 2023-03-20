@@ -26,6 +26,10 @@
 //! assert_eq!(decoder.message().unwrap().as_deref(), Some(data.as_bytes()));
 //! ```
 
+use alloc::format;
+use alloc::string::String;
+use alloc::vec::Vec;
+
 /// Errors that can happen during encoding and decoding of URs.
 #[derive(Debug)]
 pub enum Error {
@@ -294,6 +298,8 @@ impl Decoder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::vec;
+    use alloc::vec::Vec;
     use minicbor::{bytes::ByteVec, data::Tag};
 
     fn make_message_ur(length: usize, seed: &str) -> Vec<u8> {

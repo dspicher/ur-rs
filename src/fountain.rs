@@ -82,6 +82,10 @@
 //! );
 //! ```
 
+use alloc::string::String;
+use alloc::{format, vec};
+use alloc::collections::{BTreeMap, BTreeSet, VecDeque};
+use alloc::vec::Vec;
 use std::convert::Infallible;
 
 /// Errors that can happen during fountain encoding and decoding.
@@ -273,10 +277,10 @@ impl Encoder {
 /// See the [`crate::fountain`] module documentation for an example.
 #[derive(Default)]
 pub struct Decoder {
-    decoded: std::collections::HashMap<usize, Part>,
-    received: std::collections::HashSet<Vec<usize>>,
-    buffer: std::collections::HashMap<Vec<usize>, Part>,
-    queue: std::collections::VecDeque<(usize, Part)>,
+    decoded: BTreeMap<usize, Part>,
+    received: BTreeSet<Vec<usize>>,
+    buffer: BTreeMap<Vec<usize>, Part>,
+    queue: VecDeque<(usize, Part)>,
     sequence_count: usize,
     message_length: usize,
     checksum: u32,

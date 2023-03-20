@@ -36,6 +36,9 @@
 //! assert_eq!(data, decode(&encoded, Style::Minimal).unwrap());
 //! ```
 
+use alloc::string::String;
+use alloc::vec::Vec;
+
 /// The three different `bytewords` encoding styles. See the [`encode`] documentation for examples.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Style {
@@ -71,7 +74,7 @@ impl std::fmt::Display for Error {
     }
 }
 
-impl std::error::Error for Error {}
+//impl std::error::Error for Error {}
 
 /// Decodes a `bytewords`-encoded String back into a byte payload. The encoding
 /// must contain a four-byte checksum.
@@ -181,6 +184,7 @@ pub fn encode(data: &[u8], style: Style) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::vec;
 
     #[test]
     fn test_crc() {

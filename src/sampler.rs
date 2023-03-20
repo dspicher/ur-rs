@@ -1,3 +1,6 @@
+use alloc::vec;
+use alloc::vec::Vec;
+
 #[derive(Debug)]
 pub struct Weighted {
     aliases: Vec<u32>,
@@ -68,6 +71,7 @@ impl Weighted {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::{format, vec};
 
     #[test]
     fn test_sampler() {
