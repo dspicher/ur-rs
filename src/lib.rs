@@ -1,4 +1,3 @@
-#![no_std]
 //! `ur` is a crate to interact with ["uniform resource"](https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-005-ur.md) encodings of binary data.
 //! The encoding scheme is optimized for transport in URIs and QR codes.
 //!
@@ -35,9 +34,14 @@
 //!    of a fountain encoder, which splits up a byte payload into multiple segments
 //!    and emits an unbounded stream of parts which can be recombined at the receiving
 //!    decoder side.
+#![cfg_attr(all(not(test), not(feature = "std")), no_std)]
+
 #![forbid(unsafe_code)]
 
+#[cfg(not(feature = "std"))]
 extern crate core as std;
+
+#[cfg(not(feature = "std"))]
 extern crate alloc;
 
 pub mod bytewords;

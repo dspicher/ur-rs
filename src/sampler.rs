@@ -1,4 +1,6 @@
+#[cfg(not(feature = "std"))]
 use alloc::vec;
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
 #[derive(Debug)]
@@ -71,7 +73,6 @@ impl Weighted {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::{format, vec};
 
     #[test]
     fn test_sampler() {

@@ -82,9 +82,14 @@
 //! );
 //! ```
 
+
+#[cfg(not(feature = "std"))]
 use alloc::string::String;
+#[cfg(not(feature = "std"))]
 use alloc::{format, vec};
+#[cfg(not(feature = "std"))]
 use alloc::collections::{BTreeMap, BTreeSet, VecDeque};
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use std::convert::Infallible;
 
@@ -277,10 +282,23 @@ impl Encoder {
 /// See the [`crate::fountain`] module documentation for an example.
 #[derive(Default)]
 pub struct Decoder {
+    #[cfg(not(feature = "std"))]
     decoded: BTreeMap<usize, Part>,
+    #[cfg(feature = "std")]
+    decoded: std::collections::HashMap<usize, Part>,
+    #[cfg(not(feature = "std"))]
     received: BTreeSet<Vec<usize>>,
+    #[cfg(feature = "std")]
+    received: std::collections::HashSet<Vec<usize>>,
+    #[cfg(not(feature = "std"))]
     buffer: BTreeMap<Vec<usize>, Part>,
+    #[cfg(feature = "std")]
+    buffer: std::collections::HashMap<Vec<usize>, Part>,
+    #[cfg(not(feature = "std"))]
     queue: VecDeque<(usize, Part)>,
+    #[cfg(feature = "std")]
+    queue: std::collections::VecDeque<(usize, Part)>,
+
     sequence_count: usize,
     message_length: usize,
     checksum: u32,

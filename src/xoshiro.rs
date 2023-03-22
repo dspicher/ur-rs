@@ -1,3 +1,4 @@
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use bitcoin_hashes::Hash;
 use rand_xoshiro::rand_core::RngCore;
@@ -111,7 +112,6 @@ pub mod test_utils {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::vec;
 
     #[test]
     fn test_rng_1() {
