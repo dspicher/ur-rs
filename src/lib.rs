@@ -34,7 +34,7 @@
 //!    of a fountain encoder, which splits up a byte payload into multiple segments
 //!    and emits an unbounded stream of parts which can be recombined at the receiving
 //!    decoder side.
-#![cfg_attr(all(not(test), not(feature = "std")), no_std)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 #![forbid(unsafe_code)]
 

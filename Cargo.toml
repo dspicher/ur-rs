@@ -22,6 +22,6 @@ hex = "0.4"
 qrcode = { version = "0.12", default-features = false }
 
 [features]
-default = ["no_std"]
+default = ["std"]
 no_std = []
 std = []
