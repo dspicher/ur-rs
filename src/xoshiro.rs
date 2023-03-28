@@ -17,7 +17,7 @@ impl From<Xoshiro256StarStar> for Xoshiro256 {
 impl From<&[u8]> for Xoshiro256 {
     fn from(from: &[u8]) -> Self {
         let hash = bitcoin_hashes::sha256::Hash::hash(from);
-        Self::from(hash.into_inner())
+        Self::from(hash.to_byte_array())
     }
 }
 
@@ -58,7 +58,7 @@ impl Xoshiro256 {
 impl From<&str> for Xoshiro256 {
     fn from(value: &str) -> Self {
         let hash = bitcoin_hashes::sha256::Hash::hash(value.as_bytes());
-        Self::from(hash.into_inner())
+        Self::from(hash.to_byte_array())
     }
 }
 
