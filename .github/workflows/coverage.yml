@@ -1,4 +1,4 @@
-name: Code Coverage v2
+name: Code Coverage
 
 on:
   push:
@@ -7,32 +7,24 @@ on:
     branches: [ master ]
 
 jobs:
-  check:
-    name: Rust project
+   coverage:
     runs-on: ubuntu-latest
-    environment: default
+    name: ubuntu / stable / coverage
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v3
         with:
-          toolchain: stable
-          override: true
-
-      - name: Run cargo-tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
+          submodules: true
+      - name: Install stable
+        uses: dtolnay/rust-toolchain@stable
         with:
-          args: '-- --test-threads 1'
-
+          components: llvm-tools-preview
+      - name: cargo install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: cargo generate-lockfile
+        run: cargo generate-lockfile
+      - name: cargo llvm-cov
+        run: cargo llvm-cov --locked --all-features --lcov --output-path lcov.info
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v3
         with:
-          token: ${{secrets.CODECOV_TOKEN}}
-
-      - name: Archive code coverage results
-        uses: actions/upload-artifact@v3
-        with:
-          name: code-coverage-report
-          path: cobertura.xml
+          fail_ci_if_error: true
