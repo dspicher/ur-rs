@@ -1,3 +1,5 @@
+extern crate alloc;
+use alloc::vec::Vec;
 use bitcoin_hashes::Hash;
 use rand_xoshiro::rand_core::RngCore;
 use rand_xoshiro::rand_core::SeedableRng;

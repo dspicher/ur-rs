@@ -36,6 +36,9 @@
 //! assert_eq!(data, decode(&encoded, Style::Minimal).unwrap());
 //! ```
 
+extern crate alloc;
+use alloc::vec::Vec;
+
 /// The three different `bytewords` encoding styles. See the [`encode`] documentation for examples.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Style {
@@ -60,8 +63,8 @@ pub enum Error {
     NonAscii,
 }
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for Error {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Error::InvalidWord => write!(f, "invalid word"),
             Error::InvalidChecksum => write!(f, "invalid checksum"),
@@ -71,6 +74,7 @@ impl std::fmt::Display for Error {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::error::Error for Error {}
 
 /// Decodes a `bytewords`-encoded String back into a byte payload. The encoding
@@ -159,7 +163,7 @@ fn strip_checksum(mut data: Vec<u8>) -> Result<Vec<u8>, Error> {
 /// assert_eq!(encode(&[0], Style::Minimal), "aetdaowslg");
 /// ```
 #[must_use]
-pub fn encode(data: &[u8], style: Style) -> String {
+pub fn encode(data: &[u8], style: Style) -> alloc::string::String {
     let checksum = crate::crc32().checksum(data).to_be_bytes();
     let data = data.iter().chain(checksum.iter());
     let words: Vec<&str> = match style {

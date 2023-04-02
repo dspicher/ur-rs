@@ -1,0 +1,17 @@
+name: no-std
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  no-std:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - run: cargo install --locked --debug cargo-nono
+      # nono doesn't recognize bitcoin-hashes' no-std support
+      - run: (! cargo nono check | grep "ur:" | grep -v SUCCESS)

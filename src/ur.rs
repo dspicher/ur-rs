@@ -26,6 +26,9 @@
 //! assert_eq!(decoder.message().unwrap().as_deref(), Some(data.as_bytes()));
 //! ```
 
+extern crate alloc;
+use alloc::{string::String, vec::Vec};
+
 /// Errors that can happen during encoding and decoding of URs.
 #[derive(Debug)]
 pub enum Error {
@@ -43,8 +46,8 @@ pub enum Error {
     NotMultiPart,
 }
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for Error {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Error::Bytewords(e) => write!(f, "{e}"),
             Error::Fountain(e) => write!(f, "{e}"),
@@ -86,7 +89,7 @@ pub fn encode<T: Into<String>>(data: &[u8], ur_type: T) -> String {
 
 #[must_use]
 fn encode_ur(items: &[String]) -> String {
-    format!("{}:{}", "ur", items.join("/"))
+    alloc::format!("{}:{}", "ur", items.join("/"))
 }
 
 /// A uniform resource encoder with an underlying fountain encoding.

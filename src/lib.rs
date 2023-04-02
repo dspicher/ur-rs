@@ -34,7 +34,11 @@
 //!    of a fountain encoder, which splits up a byte payload into multiple segments
 //!    and emits an unbounded stream of parts which can be recombined at the receiving
 //!    decoder side.
+
 #![forbid(unsafe_code)]
+#![cfg_attr(not(feature = "std"), no_std)]
+
+extern crate alloc;
 
 pub mod bytewords;
 pub mod fountain;
