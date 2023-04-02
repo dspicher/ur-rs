@@ -82,7 +82,9 @@
 //! );
 //! ```
 
-use std::convert::Infallible;
+extern crate alloc;
+use alloc::vec::Vec;
+use core::convert::Infallible;
 
 /// Errors that can happen during fountain encoding and decoding.
 #[derive(Debug)]
@@ -105,8 +107,8 @@ pub enum Error {
     InvalidPadding,
 }
 
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for Error {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::CborDecode(e) => write!(f, "{e}"),
             Self::CborEncode(e) => write!(f, "{e}"),
@@ -213,7 +215,7 @@ impl Encoder {
         self.current_sequence += 1;
         let indexes = choose_fragments(self.current_sequence, self.parts.len(), self.checksum);
 
-        let mut mixed = vec![0; self.parts[0].len()];
+        let mut mixed = alloc::vec![0; self.parts[0].len()];
         for item in indexes {
             xor(&mut mixed, &self.parts[item]);
         }
@@ -273,10 +275,10 @@ impl Encoder {
 /// See the [`crate::fountain`] module documentation for an example.
 #[derive(Default)]
 pub struct Decoder {
-    decoded: std::collections::HashMap<usize, Part>,
-    received: std::collections::HashSet<Vec<usize>>,
-    buffer: std::collections::HashMap<Vec<usize>, Part>,
-    queue: std::collections::VecDeque<(usize, Part)>,
+    decoded: alloc::collections::btree_map::BTreeMap<usize, Part>,
+    received: alloc::collections::btree_set::BTreeSet<Vec<usize>>,
+    buffer: alloc::collections::btree_map::BTreeMap<Vec<usize>, Part>,
+    queue: Vec<(usize, Part)>,
     sequence_count: usize,
     message_length: usize,
     checksum: u32,
@@ -330,14 +332,14 @@ impl Decoder {
     fn process_simple(&mut self, part: Part) -> Result<(), Error> {
         let index = *part.indexes().first().ok_or(Error::ExpectedItem)?;
         self.decoded.insert(index, part.clone());
-        self.queue.push_back((index, part));
+        self.queue.push((index, part));
         self.process_queue()?;
         Ok(())
     }
 
     fn process_queue(&mut self) -> Result<(), Error> {
         while !self.queue.is_empty() {
-            let (index, simple) = self.queue.pop_front().ok_or(Error::ExpectedItem)?;
+            let (index, simple) = self.queue.pop().ok_or(Error::ExpectedItem)?;
             let to_process: Vec<Vec<usize>> = self
                 .buffer
                 .keys()
@@ -356,7 +358,7 @@ impl Decoder {
                 if new_indexes.len() == 1 {
                     self.decoded
                         .insert(*new_indexes.first().unwrap(), part.clone());
-                    self.queue.push_back((*new_indexes.first().unwrap(), part));
+                    self.queue.push((*new_indexes.first().unwrap(), part));
                 } else {
                     self.buffer.insert(new_indexes, part);
                 }
@@ -388,7 +390,7 @@ impl Decoder {
         }
         if indexes.len() == 1 {
             self.decoded.insert(*indexes.first().unwrap(), part.clone());
-            self.queue.push_back((*indexes.first().unwrap(), part));
+            self.queue.push((*indexes.first().unwrap(), part));
         } else {
             self.buffer.insert(indexes, part);
         }
@@ -468,7 +470,7 @@ impl Decoder {
             .map(|idx| self.decoded.get(&idx).ok_or(Error::ExpectedItem))
             .collect::<Result<Vec<&Part>, Error>>()?
             .iter()
-            .fold(vec![], |a, b| [a, b.data.clone()].concat());
+            .fold(alloc::vec![], |a, b| [a, b.data.clone()].concat());
         if !combined
             .get(self.message_length..)
             .ok_or(Error::ExpectedItem)?
@@ -588,8 +590,8 @@ impl Part {
     }
 
     #[must_use]
-    pub(crate) fn sequence_id(&self) -> String {
-        format!("{}-{}", self.sequence, self.sequence_count)
+    pub(crate) fn sequence_id(&self) -> alloc::string::String {
+        alloc::format!("{}-{}", self.sequence, self.sequence_count)
     }
 
     /// Returns a slice view onto the underlying data.
@@ -634,7 +636,8 @@ pub(crate) fn fragment_length(data_length: usize, max_fragment_length: usize) ->
 
 #[must_use]
 pub(crate) fn partition(mut data: Vec<u8>, fragment_length: usize) -> Vec<Vec<u8>> {
-    let mut padding = vec![0; (fragment_length - (data.len() % fragment_length)) % fragment_length];
+    let mut padding =
+        alloc::vec![0; (fragment_length - (data.len() % fragment_length)) % fragment_length];
     data.append(&mut padding);
     data.chunks(fragment_length).map(<[u8]>::to_vec).collect()
 }
@@ -642,7 +645,7 @@ pub(crate) fn partition(mut data: Vec<u8>, fragment_length: usize) -> Vec<Vec<u8
 #[must_use]
 fn choose_fragments(sequence: usize, fragment_count: usize, checksum: u32) -> Vec<usize> {
     if sequence <= fragment_count {
-        return vec![sequence - 1];
+        return alloc::vec![sequence - 1];
     }
 
     #[allow(clippy::cast_possible_truncation)]

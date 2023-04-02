@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+ - Added support for `no-std` environments. https://github.com/dspicher/ur-rs/pull/183
 
 ## [0.3.0] - 2023-01-07
  - Added `ur::ur::decode` to the public API to decode a single `ur` URI. https://github.com/dspicher/ur-rs/pull/112

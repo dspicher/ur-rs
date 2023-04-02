@@ -1,3 +1,6 @@
+extern crate alloc;
+use alloc::vec::Vec;
+
 #[derive(Debug)]
 pub struct Weighted {
     aliases: Vec<u32>,
@@ -22,8 +25,8 @@ impl Weighted {
             .map(|j| count - j)
             .partition(|&j| weights[j] < 1.0);
 
-        let mut probs: Vec<f64> = vec![0.0; count];
-        let mut aliases: Vec<u32> = vec![0; count];
+        let mut probs: Vec<f64> = alloc::vec![0.0; count];
+        let mut aliases: Vec<u32> = alloc::vec![0; count];
 
         while !s.is_empty() && !l.is_empty() {
             let a = s.remove(s.len() - 1);
