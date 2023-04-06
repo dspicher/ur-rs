@@ -91,6 +91,7 @@ use alloc::{format, vec};
 use alloc::collections::{BTreeMap, BTreeSet, VecDeque};
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
+use core::cmp::min;
 use std::convert::Infallible;
 
 /// Errors that can happen during fountain encoding and decoding.
@@ -303,6 +304,9 @@ pub struct Decoder {
     message_length: usize,
     checksum: u32,
     fragment_length: usize,
+
+    //Record the number of valid parts processed
+    processed_parts_count: usize,
 }
 
 impl Decoder {
@@ -346,6 +350,7 @@ impl Decoder {
         } else {
             self.process_complex(part)?;
         }
+        self.processed_parts_count += 1;
         Ok(true)
     }
 
@@ -505,6 +510,14 @@ impl Decoder {
                 .ok_or(Error::ExpectedItem)?
                 .to_vec(),
         ))
+    }
+
+    pub fn progress(&self) -> u8 {
+        if self.processed_parts_count == 0 {
+            return self.processed_parts_count as u8;
+        }
+        let percent: f32 = self.processed_parts_count as f32 / (self.sequence_count as f32 * 1.75);
+        min(99, (percent * 100f32) as u32) as u8
     }
 }
 
@@ -668,7 +681,7 @@ fn choose_fragments(sequence: usize, fragment_count: usize, checksum: u32) -> Ve
     }
 
     #[allow(clippy::cast_possible_truncation)]
-    let sequence = sequence as u32;
+        let sequence = sequence as u32;
 
     let mut seed = [0u8; 8];
     seed[0..4].copy_from_slice(&sequence.to_be_bytes());
@@ -727,7 +740,7 @@ mod tests {
             "c7daaa14ae5152a067277b1b3902677d979f8e39cc2aafb3bc06fcf69160a853e6869dcc09a11b5009f91e6b89e5b927ab1527a735660faa6012b420dd926d940d742be6a64fb01cdc0cff9faa323f02ba41436871a0eab851e7f5782d10",
             "fbefde2a7e9ae9dc1e5c2c48f74f6c824ce9ef3c89f68800d44587bedc4ab417cfb3e7447d90e1e417e6e05d30e87239d3a5d1d45993d4461e60a0192831640aa32dedde185a371ded2ae15f8a93dba8809482ce49225daadfbb0fec629e",
             "23880789bdf9ed73be57fa84d555134630e8d0f7df48349f29869a477c13ccca9cd555ac42ad7f568416c3d61959d0ed568b2b81c7771e9088ad7fd55fd4386bafbf5a528c30f107139249357368ffa980de2c76ddd9ce4191376be0e6b5",
-            "170010067e2e75ebe2d2904aeb1f89d5dc98cd4a6f2faaa8be6d03354c990fd895a97feb54668473e9d942bb99e196d897e8f1b01625cf48a7b78d249bb4985c065aa8cd1402ed2ba1b6f908f63dcd84b66425df00000000000000000000"
+            "170010067e2e75ebe2d2904aeb1f89d5dc98cd4a6f2faaa8be6d03354c990fd895a97feb54668473e9d942bb99e196d897e8f1b01625cf48a7b78d249bb4985c065aa8cd1402ed2ba1b6f908f63dcd84b66425df00000000000000000000",
         ];
         assert_eq!(fragments.len(), expected_fragments.len());
         for (fragment, expected_fragment) in fragments.iter().zip(expected_fragments) {
@@ -826,15 +839,15 @@ mod tests {
             "3171c5dc365766eff25ae47c6f10e7de48cfb8474e050e5fe997a6dc24",
             "e055c2433562184fa71b4be94f262e200f01c6f74c284b0dc6fae6673f",
         ]
-        .iter()
-        .enumerate()
-        .map(|(i, data)| super::Part {
-            sequence: i + 1,
-            sequence_count: 9,
-            message_length: 256,
-            checksum: 23_570_951,
-            data: hex::decode(data).unwrap(),
-        });
+            .iter()
+            .enumerate()
+            .map(|(i, data)| super::Part {
+                sequence: i + 1,
+                sequence_count: 9,
+                message_length: 256,
+                checksum: 23_570_951,
+                data: hex::decode(data).unwrap(),
+            });
         for (sequence, e) in expected_parts.into_iter().enumerate() {
             assert_eq!(encoder.current_sequence(), sequence);
             assert_eq!(encoder.next_part(), e);
@@ -1093,13 +1106,13 @@ mod tests {
         Part::from_cbor(&[
             0x85, 0x19, 0x1, 0x2, 0x19, 0x3, 0x4, 0x19, 0x5, 0x6, 0x19, 0x7, 0x8, 0x41, 0x5,
         ])
-        .unwrap();
+            .unwrap();
         // u32
         Part::from_cbor(&[
             0x85, 0x1a, 0x1, 0x2, 0x3, 0x4, 0x1a, 0x5, 0x6, 0x7, 0x8, 0x1a, 0x9, 0x10, 0x11, 0x12,
             0x1a, 0x13, 0x14, 0x15, 0x16, 0x41, 0x5,
         ])
-        .unwrap();
+            .unwrap();
         // u64
         assert!(matches!(
             Part::from_cbor(&[

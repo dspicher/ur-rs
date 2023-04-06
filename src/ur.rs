@@ -296,6 +296,10 @@ impl Decoder {
     pub fn message(&self) -> Result<Option<Vec<u8>>, Error> {
         self.fountain.message().map_err(Error::from)
     }
+
+    pub fn progress(&self) -> u8 {
+        self.fountain.progress()
+    }
 }
 
 #[cfg(test)]
@@ -394,6 +398,7 @@ mod tests {
         while !decoder.complete() {
             assert_eq!(decoder.message().unwrap(), None);
             decoder.receive(&encoder.next_part().unwrap()).unwrap();
+            println!("progress is {}", decoder.progress());
         }
         assert_eq!(decoder.message().unwrap(), Some(ur));
     }
