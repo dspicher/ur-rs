@@ -19,7 +19,7 @@ jobs:
     - name: Version
       run: cargo --version
     - name: Format
-      run: cargo fmt -- --check
+      run: cargo fmt -- --check --config format_code_in_doc_comments=true
     - name: Install crates
       run: cargo install --debug cargo-sort cargo-rdme cargo-audit
     - name: Check sorted dependencies
