@@ -8,8 +8,7 @@
 //! ```
 //! let data = String::from("Ten chars!").repeat(10);
 //! let max_length = 5;
-//! let scheme = "bytes";
-//! let mut encoder = ur::Encoder::new(data.as_bytes(), max_length, scheme).unwrap();
+//! let mut encoder = ur::Encoder::bytes(data.as_bytes(), max_length).unwrap();
 //! let part = encoder.next_part().unwrap();
 //! assert_eq!(
 //!     part,
@@ -78,18 +77,36 @@ impl From<crate::fountain::Error> for Error {
 ///
 /// ```
 /// assert_eq!(
-///     ur::ur::encode(b"data", "bytes"),
+///     ur::ur::encode(b"data", &ur::Type::Bytes),
 ///     "ur:bytes/iehsjyhspmwfwfia"
 /// );
 /// ```
-pub fn encode<T: Into<String>>(data: &[u8], ur_type: T) -> String {
+#[must_use]
+pub fn encode(data: &[u8], ur_type: &Type) -> String {
     let body = crate::bytewords::encode(data, crate::bytewords::Style::Minimal);
-    encode_ur(&[ur_type.into(), body])
+    encode_ur(&[ur_type.encoding(), body])
 }
 
 #[must_use]
 fn encode_ur(items: &[String]) -> String {
     alloc::format!("{}:{}", "ur", items.join("/"))
+}
+
+/// The type of uniform resource.
+pub enum Type {
+    /// A `bytes` uniform resource.
+    Bytes,
+    /// A custom uniform resource.
+    Custom(String),
+}
+
+impl Type {
+    fn encoding(&self) -> String {
+        match self {
+            Self::Bytes => "bytes".into(),
+            Self::Custom(s) => s.clone(),
+        }
+    }
 }
 
 /// A uniform resource encoder with an underlying fountain encoding.
@@ -99,11 +116,11 @@ fn encode_ur(items: &[String]) -> String {
 /// See the [`crate::ur`] module documentation for an example.
 pub struct Encoder {
     fountain: crate::fountain::Encoder,
-    ur_type: String,
+    ur_type: Type,
 }
 
 impl Encoder {
-    /// Creates a new [`Encoder`] for given a message payload.
+    /// Creates a new [`bytes`] [`Encoder`] for given a message payload.
     ///
     /// The emitted fountain parts will respect the maximum fragment length argument.
     ///
@@ -115,14 +132,33 @@ impl Encoder {
     ///
     /// If an empty message or a zero maximum fragment length is passed, an error
     /// will be returned.
-    pub fn new<T: Into<String>>(
+    ///
+    /// [`bytes`]: Type::Bytes
+    pub fn bytes(message: &[u8], max_fragment_length: usize) -> Result<Self, Error> {
+        Ok(Self {
+            fountain: crate::fountain::Encoder::new(message, max_fragment_length)?,
+            ur_type: Type::Bytes,
+        })
+    }
+
+    /// Creates a new [`custom`] [`Encoder`] for given a message payload.
+    ///
+    /// The emitted fountain parts will respect the maximum fragment length argument.
+    ///
+    /// # Errors
+    ///
+    /// If an empty message or a zero maximum fragment length is passed, an error
+    /// will be returned.
+    ///
+    /// [`custom`]: Type::Custom
+    pub fn new(
         message: &[u8],
         max_fragment_length: usize,
-        ur_type: T,
+        s: impl Into<String>,
     ) -> Result<Self, Error> {
         Ok(Self {
             fountain: crate::fountain::Encoder::new(message, max_fragment_length)?,
-            ur_type: ur_type.into(),
+            ur_type: Type::Custom(s.into()),
         })
     }
 
@@ -138,7 +174,11 @@ impl Encoder {
     pub fn next_part(&mut self) -> Result<String, Error> {
         let part = self.fountain.next_part();
         let body = crate::bytewords::encode(&part.cbor()?, crate::bytewords::Style::Minimal);
-        Ok(encode_ur(&[self.ur_type.clone(), part.sequence_id(), body]))
+        Ok(encode_ur(&[
+            self.ur_type.encoding(),
+            part.sequence_id(),
+            body,
+        ]))
     }
 
     /// Returns the current count of already emitted parts.
@@ -146,7 +186,7 @@ impl Encoder {
     /// # Examples
     ///
     /// ```
-    /// let mut encoder = ur::Encoder::new(b"data", 5, "bytes").unwrap();
+    /// let mut encoder = ur::Encoder::bytes(b"data", 5).unwrap();
     /// assert_eq!(encoder.current_index(), 0);
     /// encoder.next_part().unwrap();
     /// assert_eq!(encoder.current_index(), 1);
@@ -161,7 +201,7 @@ impl Encoder {
     /// # Examples
     ///
     /// ```
-    /// let mut encoder = ur::Encoder::new(b"data", 3, "bytes").unwrap();
+    /// let mut encoder = ur::Encoder::bytes(b"data", 3).unwrap();
     /// assert_eq!(encoder.fragment_count(), 2);
     /// ```
     #[must_use]
@@ -307,7 +347,7 @@ mod tests {
     #[test]
     fn test_single_part_ur() {
         let ur = make_message_ur(50, "Wolf");
-        let encoded = encode(&ur, "bytes");
+        let encoded = encode(&ur, &Type::Bytes);
         let expected = "ur:bytes/hdeymejtswhhylkepmykhhtsytsnoyoyaxaedsuttydmmhhpktpmsrjtgwdpfnsboxgwlbaawzuefywkdplrsrjynbvygabwjldapfcsdwkbrkch";
         assert_eq!(encoded, expected);
         let decoded = decode(&encoded).unwrap();
@@ -317,7 +357,7 @@ mod tests {
     #[test]
     fn test_ur_encoder() {
         let ur = make_message_ur(256, "Wolf");
-        let mut encoder = Encoder::new(&ur, 30, "bytes").unwrap();
+        let mut encoder = Encoder::bytes(&ur, 30).unwrap();
         let expected = vec![
             "ur:bytes/1-9/lpadascfadaxcywenbpljkhdcahkadaemejtswhhylkepmykhhtsytsnoyoyaxaedsuttydmmhhpktpmsrjtdkgslpgh",
             "ur:bytes/2-9/lpaoascfadaxcywenbpljkhdcagwdpfnsboxgwlbaawzuefywkdplrsrjynbvygabwjldapfcsgmghhkhstlrdcxaefz",
@@ -373,7 +413,7 @@ mod tests {
 
         let data = crypto_seed().unwrap();
 
-        let e = encode(&data, "crypto-request");
+        let e = encode(&data, &Type::Custom("crypto-request".into()));
         let expected = "ur:crypto-request/oeadtpdagdaobncpftlnylfgfgmuztihbawfsgrtflaotaadwkoyadtaaohdhdcxvsdkfgkepezepefrrffmbnnbmdvahnptrdtpbtuyimmemweootjshsmhlunyeslnameyhsdi";
         assert_eq!(expected, e);
 
@@ -385,7 +425,7 @@ mod tests {
     #[test]
     fn test_multipart_ur() {
         let ur = make_message_ur(32767, "Wolf");
-        let mut encoder = Encoder::new(&ur, 1000, "bytes").unwrap();
+        let mut encoder = Encoder::bytes(&ur, 1000).unwrap();
         let mut decoder = Decoder::default();
         while !decoder.complete() {
             assert_eq!(decoder.message().unwrap(), None);
@@ -418,5 +458,16 @@ mod tests {
         ));
         decode("ur:bytes/aeadaolazmjendeoti").unwrap();
         decode("ur:whatever-12/aeadaolazmjendeoti").unwrap();
+    }
+
+    #[test]
+    fn test_custom_encoder() {
+        let data = String::from("Ten chars!");
+        let max_length = 5;
+        let mut encoder = Encoder::new(data.as_bytes(), max_length, "my-scheme").unwrap();
+        assert_eq!(
+            encoder.next_part().unwrap(),
+            "ur:my-scheme/1-2/lpadaobkcywkwmhfwnfeghihjtcxiansvomopr"
+        );
     }
 }

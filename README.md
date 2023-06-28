@@ -17,8 +17,7 @@ subsets of which can be recombined at the receiving side into the payload:
 ```rust
 let data = String::from("Ten chars!").repeat(10);
 let max_length = 5;
-let scheme = "bytes";
-let mut encoder = ur::Encoder::new(data.as_bytes(), max_length, scheme).unwrap();
+let mut encoder = ur::Encoder::bytes(data.as_bytes(), max_length).unwrap();
 let part = encoder.next_part().unwrap();
 assert_eq!(
     part,
