@@ -152,7 +152,7 @@ impl Encoder {
     /// assert_eq!(encoder.current_index(), 1);
     /// ```
     #[must_use]
-    pub fn current_index(&self) -> usize {
+    pub const fn current_index(&self) -> usize {
         self.fountain.current_sequence()
     }
 
