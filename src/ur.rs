@@ -31,7 +31,9 @@ use alloc::{string::String, vec::Vec};
 /// Errors that can happen during encoding and decoding of URs.
 #[derive(Debug)]
 pub enum Error {
+    /// A bytewords error.
     Bytewords(crate::bytewords::Error),
+    /// A fountain error.
     Fountain(crate::fountain::Error),
     /// Invalid scheme.
     InvalidScheme,
@@ -214,7 +216,9 @@ impl Encoder {
 /// multip-part. See e.g. [`decode`] where it is returned.
 #[derive(Debug, PartialEq, Eq)]
 pub enum Kind {
+    /// This UR contains the full data payload.
     SinglePart,
+    /// This UR contains part of the data payload.
     MultiPart,
 }
 
