@@ -49,13 +49,13 @@ pub enum Error {
 impl core::fmt::Display for Error {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Error::Bytewords(e) => write!(f, "{e}"),
-            Error::Fountain(e) => write!(f, "{e}"),
-            Error::InvalidScheme => write!(f, "Invalid scheme"),
-            Error::TypeUnspecified => write!(f, "No type specified"),
-            Error::InvalidCharacters => write!(f, "Type contains invalid characters"),
-            Error::InvalidIndices => write!(f, "Invalid indices"),
-            Error::NotMultiPart => write!(f, "Can't decode single-part UR as multi-part"),
+            Self::Bytewords(e) => write!(f, "{e}"),
+            Self::Fountain(e) => write!(f, "{e}"),
+            Self::InvalidScheme => write!(f, "Invalid scheme"),
+            Self::TypeUnspecified => write!(f, "No type specified"),
+            Self::InvalidCharacters => write!(f, "Type contains invalid characters"),
+            Self::InvalidIndices => write!(f, "Invalid indices"),
+            Self::NotMultiPart => write!(f, "Can't decode single-part UR as multi-part"),
         }
     }
 }
