@@ -31,7 +31,7 @@ jobs:
     - name: Check
       run: cargo check --locked
     - name: Clippy
-      run: cargo clippy --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -D clippy::dbg-macro -A clippy::missing-panics-doc
+      run: cargo clippy --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -D clippy::nursery -D clippy::dbg-macro -A clippy::missing-panics-doc
     - name: Build
       run: cargo build
     - name: Run tests
