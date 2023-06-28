@@ -66,10 +66,10 @@ pub enum Error {
 impl core::fmt::Display for Error {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Error::InvalidWord => write!(f, "invalid word"),
-            Error::InvalidChecksum => write!(f, "invalid checksum"),
-            Error::InvalidLength => write!(f, "invalid length"),
-            Error::NonAscii => write!(f, "bytewords string contains non-ASCII characters"),
+            Self::InvalidWord => write!(f, "invalid word"),
+            Self::InvalidChecksum => write!(f, "invalid checksum"),
+            Self::InvalidLength => write!(f, "invalid length"),
+            Self::NonAscii => write!(f, "bytewords string contains non-ASCII characters"),
         }
     }
 }
