@@ -246,9 +246,9 @@ pub enum Kind {
 /// of "/" separators.
 pub fn decode(value: &str) -> Result<(Kind, Vec<u8>), Error> {
     let strip_scheme = value.strip_prefix("ur:").ok_or(Error::InvalidScheme)?;
-    let (type_, strip_type) = strip_scheme.split_once('/').ok_or(Error::TypeUnspecified)?;
+    let (r#type, strip_type) = strip_scheme.split_once('/').ok_or(Error::TypeUnspecified)?;
 
-    if !type_
+    if !r#type
         .trim_start_matches(|c: char| c.is_ascii_alphanumeric() || c == '-')
         .is_empty()
     {
