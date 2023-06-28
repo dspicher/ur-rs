@@ -18,11 +18,7 @@
 //! let data = String::from("Ten chars!");
 //! let max_length = 4;
 //! // note the padding
-//! let (p1, p2, p3) = (
-//!     "Ten ".as_bytes(),
-//!     "char".as_bytes(),
-//!     "s!\u{0}\u{0}".as_bytes(),
-//! );
+//! let (p1, p2, p3) = (b"Ten ", b"char", "s!\u{0}\u{0}".as_bytes());
 //!
 //! let mut encoder = ur::fountain::Encoder::new(data.as_bytes(), max_length).unwrap();
 //! let mut decoder = ur::fountain::Decoder::default();
@@ -154,7 +150,7 @@ impl Encoder {
     ///
     /// ```
     /// use ur::fountain::Encoder;
-    /// let encoder = Encoder::new("binary data".as_bytes(), 4).unwrap();
+    /// let encoder = Encoder::new(b"binary data", 4).unwrap();
     /// ```
     ///
     /// Note that the effective fragment size will not always equal the maximum
@@ -162,7 +158,7 @@ impl Encoder {
     ///
     /// ```
     /// use ur::fountain::Encoder;
-    /// let mut encoder = Encoder::new("data".as_bytes(), 3).unwrap();
+    /// let mut encoder = Encoder::new(b"data", 3).unwrap();
     /// assert_eq!(encoder.next_part().data().len(), 2);
     /// ```
     ///
@@ -193,7 +189,7 @@ impl Encoder {
     ///
     /// ```
     /// use ur::fountain::Encoder;
-    /// let mut encoder = Encoder::new("data".as_bytes(), 3).unwrap();
+    /// let mut encoder = Encoder::new(b"data", 3).unwrap();
     /// assert_eq!(encoder.current_sequence(), 0);
     /// encoder.next_part();
     /// assert_eq!(encoder.current_sequence(), 1);
@@ -235,7 +231,7 @@ impl Encoder {
     ///
     /// ```
     /// use ur::fountain::Encoder;
-    /// let mut encoder = Encoder::new("data".as_bytes(), 3).unwrap();
+    /// let mut encoder = Encoder::new(b"data", 3).unwrap();
     /// assert_eq!(encoder.fragment_count(), 2);
     /// ```
     #[must_use]
@@ -252,7 +248,7 @@ impl Encoder {
     ///
     /// ```
     /// use ur::fountain::Encoder;
-    /// let mut encoder = Encoder::new(&"data".as_bytes().repeat(10), 3).unwrap();
+    /// let mut encoder = Encoder::new(&b"data".repeat(10), 3).unwrap();
     /// while !encoder.complete() {
     ///     assert!(encoder.current_sequence() < encoder.fragment_count());
     ///     encoder.next_part();
@@ -418,7 +414,7 @@ impl Decoder {
     /// ```
     /// use ur::fountain::{Decoder, Encoder};
     /// let mut decoder = Decoder::default();
-    /// let mut encoder = Encoder::new(&"data".as_bytes(), 3).unwrap();
+    /// let mut encoder = Encoder::new(b"data", 3).unwrap();
     /// let part = encoder.next_part();
     ///
     /// // a fresh decoder always returns false
@@ -430,7 +426,7 @@ impl Decoder {
     /// assert!(decoder.validate(&part));
     ///
     /// // parts with the different metadata don't validate
-    /// let mut encoder = Encoder::new(&"more data".as_bytes(), 3).unwrap();
+    /// let mut encoder = Encoder::new(b"more data", 3).unwrap();
     /// let part = encoder.next_part();
     /// assert!(!decoder.validate(&part));
     /// ```
@@ -552,7 +548,7 @@ impl Part {
     ///
     /// ```
     /// use ur::fountain::Encoder;
-    /// let mut encoder = Encoder::new(&"data".as_bytes(), 3).unwrap();
+    /// let mut encoder = Encoder::new(b"data", 3).unwrap();
     /// assert_eq!(encoder.next_part().indexes(), vec![0]);
     /// assert_eq!(encoder.next_part().indexes(), vec![1]);
     /// ```
@@ -570,7 +566,7 @@ impl Part {
     ///
     /// ```
     /// use ur::fountain::Encoder;
-    /// let mut encoder = Encoder::new(&"Ten chars!".as_bytes(), 4).unwrap();
+    /// let mut encoder = Encoder::new(b"Ten chars!", 4).unwrap();
     /// // The encoder always emits the simple parts covering the message first
     /// assert!(encoder.next_part().is_simple());
     /// assert!(encoder.next_part().is_simple());
@@ -859,7 +855,7 @@ mod tests {
     #[test]
     fn test_fountain_encoder_zero_max_length() {
         assert!(matches!(
-            Encoder::new("foo".as_bytes(), 0),
+            Encoder::new(b"foo", 0),
             Err(Error::InvalidFragmentLen)
         ));
     }
@@ -951,7 +947,7 @@ mod tests {
 
     #[test]
     fn test_decoder_part_validation() {
-        let mut encoder = Encoder::new("foo".as_bytes(), 2).unwrap();
+        let mut encoder = Encoder::new(b"foo", 2).unwrap();
         let mut decoder = Decoder::default();
         let mut part = encoder.next_part();
         assert!(decoder.receive(part.clone()).unwrap());

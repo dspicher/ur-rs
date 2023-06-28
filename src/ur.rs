@@ -78,7 +78,7 @@ impl From<crate::fountain::Error> for Error {
 ///
 /// ```
 /// assert_eq!(
-///     ur::ur::encode("data".as_bytes(), "bytes"),
+///     ur::ur::encode(b"data", "bytes"),
 ///     "ur:bytes/iehsjyhspmwfwfia"
 /// );
 /// ```
@@ -146,7 +146,7 @@ impl Encoder {
     /// # Examples
     ///
     /// ```
-    /// let mut encoder = ur::Encoder::new("data".as_bytes(), 5, "bytes").unwrap();
+    /// let mut encoder = ur::Encoder::new(b"data", 5, "bytes").unwrap();
     /// assert_eq!(encoder.current_index(), 0);
     /// encoder.next_part().unwrap();
     /// assert_eq!(encoder.current_index(), 1);
@@ -161,7 +161,7 @@ impl Encoder {
     /// # Examples
     ///
     /// ```
-    /// let mut encoder = ur::Encoder::new("data".as_bytes(), 3, "bytes").unwrap();
+    /// let mut encoder = ur::Encoder::new(b"data", 3, "bytes").unwrap();
     /// assert_eq!(encoder.fragment_count(), 2);
     /// ```
     #[must_use]
@@ -187,11 +187,11 @@ pub enum Kind {
 /// ```
 /// assert_eq!(
 ///     ur::ur::decode("ur:bytes/iehsjyhspmwfwfia").unwrap(),
-///     (ur::ur::Kind::SinglePart, "data".as_bytes().to_vec())
+///     (ur::ur::Kind::SinglePart, b"data".to_vec())
 /// );
 /// assert_eq!(
 ///     ur::ur::decode("ur:bytes/1-2/iehsjyhspmwfwfia").unwrap(),
-///     (ur::ur::Kind::MultiPart, "data".as_bytes().to_vec())
+///     (ur::ur::Kind::MultiPart, b"data".to_vec())
 /// );
 /// ```
 ///
