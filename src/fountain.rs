@@ -1040,32 +1040,22 @@ mod tests {
             Part::from_cbor(&[0x86, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6]),
             Err(Error::CborDecode(e)) if e.to_string() == "decode error: invalid CBOR array length"
         ));
-        // the first item must be an unsigned integer
-        assert!(matches!(
-            Part::from_cbor(&[0x85, 0x41, 0x1, 0x2, 0x3, 0x4, 0x41, 0x1]),
-            Err(Error::CborDecode(e)) if e.to_string() == "unexpected type bytes at position 1: expected u32"
-        ));
-        // the second item must be an unsigned integer
-        assert!(matches!(
-            Part::from_cbor(&[0x85, 0x1, 0x41, 0x2, 0x3, 0x4, 0x41, 0x1]),
-            Err(Error::CborDecode(e)) if e.to_string() == "unexpected type bytes at position 2: expected u32"
-        ));
-        // the third item must be an unsigned integer
-        assert!(matches!(
-            Part::from_cbor(&[0x85, 0x1, 0x2, 0x41, 0x3, 0x4, 0x41, 0x1]),
-            Err(Error::CborDecode(e)) if e.to_string() == "unexpected type bytes at position 3: expected u32"
-        ));
-        // the fourth item must be an unsigned integer
-        assert!(matches!(
-            Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x41, 0x4, 0x41, 0x1]),
-            Err(Error::CborDecode(e)) if e.to_string() == "unexpected type bytes at position 4: expected u32"
-        ));
+        // items one through four must be an unsigned integer
+        let mut cbor = [0x85, 0x1, 0x2, 0x3, 0x4, 0x41, 0x5];
+        for idx in 1..=4 {
+            Part::from_cbor(&cbor).unwrap();
+            cbor[idx] = 0x41;
+            assert!(matches!(
+                Part::from_cbor(&cbor),
+                Err(Error::CborDecode(e)) if e.to_string() == format!("unexpected type bytes at position {idx}: expected u32")
+            ));
+            cbor[idx] = u8::try_from(idx).unwrap();
+        }
         // the fifth item must be byte string
         assert!(matches!(
             Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x4, 0x5]),
             Err(Error::CborDecode(e)) if e.to_string() == "unexpected type u8 at position 5: expected bytes (definite length)"
         ));
-        Part::from_cbor(&[0x85, 0x1, 0x2, 0x3, 0x4, 0x41, 0x5]).unwrap();
     }
 
     #[test]
