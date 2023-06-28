@@ -4,7 +4,7 @@ fn main() {
     loop {
         fuzz!(|data: &[u8]| {
             let max_length = 1 + *data.first().unwrap() as usize;
-            let mut encoder = ur::Encoder::new(data, max_length, "bytes").unwrap();
+            let mut encoder = ur::Encoder::bytes(data, max_length).unwrap();
             let mut decoder = ur::Decoder::default();
             for _ in 0..encoder.fragment_count() {
                 let part = encoder.next_part().unwrap();

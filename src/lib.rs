@@ -8,8 +8,7 @@
 //! ```
 //! let data = String::from("Ten chars!").repeat(10);
 //! let max_length = 5;
-//! let scheme = "bytes";
-//! let mut encoder = ur::Encoder::new(data.as_bytes(), max_length, scheme).unwrap();
+//! let mut encoder = ur::Encoder::bytes(data.as_bytes(), max_length).unwrap();
 //! let part = encoder.next_part().unwrap();
 //! assert_eq!(
 //!     part,
@@ -52,6 +51,7 @@ pub use self::ur::decode;
 pub use self::ur::encode;
 pub use self::ur::Decoder;
 pub use self::ur::Encoder;
+pub use self::ur::Type;
 
 #[must_use]
 pub(crate) const fn crc32() -> crc::Crc<u32> {
