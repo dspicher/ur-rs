@@ -195,7 +195,7 @@ impl Encoder {
     /// assert_eq!(encoder.current_sequence(), 1);
     /// ```
     #[must_use]
-    pub fn current_sequence(&self) -> usize {
+    pub const fn current_sequence(&self) -> usize {
         self.current_sequence
     }
 
@@ -614,7 +614,7 @@ impl Part {
 /// Note: there's an implementation on the `usize` type of this function,
 /// but it's not stable yet.
 #[must_use]
-fn div_ceil(a: usize, b: usize) -> usize {
+const fn div_ceil(a: usize, b: usize) -> usize {
     let d = a / b;
     let r = a % b;
     if r > 0 {
@@ -625,7 +625,7 @@ fn div_ceil(a: usize, b: usize) -> usize {
 }
 
 #[must_use]
-pub(crate) fn fragment_length(data_length: usize, max_fragment_length: usize) -> usize {
+pub(crate) const fn fragment_length(data_length: usize, max_fragment_length: usize) -> usize {
     let fragment_count = div_ceil(data_length, max_fragment_length);
     div_ceil(data_length, fragment_count)
 }
