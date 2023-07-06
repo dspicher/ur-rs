@@ -12,6 +12,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - run: cargo install --locked --debug cargo-nono
-      # nono doesn't recognize bitcoin-hashes' no-std support
-      - run: (! cargo nono check | grep "ur:" | grep -v SUCCESS)
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: thumbv6m-none-eabi
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --target thumbv6m-none-eabi --no-default-features
