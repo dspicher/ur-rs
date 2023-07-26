@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
  - Added support for `no-std` environments. https://github.com/dspicher/ur-rs/pull/183
  - Introduced a type-safe `ur::Type` enum and a `ur::Encoder::bytes` shorthand constructor. https://github.com/dspicher/ur-rs/pull/186
+ - Added `wasm` example. https://github.com/dspicher/ur-rs/pull/191
 
 ## [0.3.0] - 2023-01-07
  - Added `ur::ur::decode` to the public API to decode a single `ur` URI. https://github.com/dspicher/ur-rs/pull/112
