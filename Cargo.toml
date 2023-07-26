@@ -1,5 +1,5 @@
 [workspace]
-members = ["fuzz"]
+members = ["examples/wasm", "fuzz"]
 
 [package]
 name = "ur"
