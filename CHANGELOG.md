@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - Introduced a type-safe `ur::Type` enum and a `ur::Encoder::bytes` shorthand constructor. https://github.com/dspicher/ur-rs/pull/186
  - Added `wasm` example. https://github.com/dspicher/ur-rs/pull/191
 
-## [0.3.0] - 2023-01-07
+## [0.3.0](https://github.com/dspicher/ur-rs/releases/tag/0.3.0) - 2023-01-07
  - Added `ur::ur::decode` to the public API to decode a single `ur` URI. https://github.com/dspicher/ur-rs/pull/112
  - Added `ur::ur::encode` and `ur::ur::decode` to the root library path. https://github.com/dspicher/ur-rs/pull/112
  - Bumped the Rust edition to 2021. https://github.com/dspicher/ur-rs/pull/113
@@ -17,10 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - Migrated from `anyhow` errors to a custom error enum. https://github.com/dspicher/ur-rs/pull/159
  - Remove `std::fmt::Display` implementation of `Part`. https://github.com/dspicher/ur-rs/pull/160
 
-## [0.2.0] - 2021-12-08
+## [0.2.0](https://github.com/dspicher/ur-rs/releases/tag/0.2.0) - 2021-12-08
  - The public API has been greatly restricted
  - All public methods and structs are documented and should be much more stable going forward
  - Introduced fuzz testing
 
-## [0.1.0] - 2021-08-23
+## 0.1.0 - 2021-08-23
  - Initial release
