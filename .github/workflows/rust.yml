@@ -16,30 +16,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Version
-      run: cargo --version
-    - name: Format
-      run: cargo fmt -- --check --config format_code_in_doc_comments=true
     - name: Install crates
       run: cargo install --debug cargo-sort cargo-rdme cargo-audit
-    - name: Check sorted dependencies
-      run: cargo sort --check
-    - name: Check README is up-to-date
-      run: cargo rdme --check
-    - name: Cargo audit
-      run: cargo audit -D warnings
-    - name: Check
-      run: cargo check --locked
-    - name: Clippy
-      run: cargo clippy --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -D clippy::nursery -D clippy::dbg-macro -A clippy::missing-panics-doc
-    - name: Build
-      run: cargo build
-    - name: Run tests
-      run: cargo test
-    - name: Lint fuzz
-      working-directory: ./fuzz
+    - name: Lint
       run: |
-        cargo fmt -- --check
-        cargo sort --check
-        cargo check
-        cargo clippy --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -D clippy::dbg-macro -A clippy::missing-panics-doc
+        cargo fmt -- --check --config format_code_in_doc_comments=true
+        cargo rdme --check
+        cargo sort --workspace --check
+        cargo audit -D warnings
+        cargo check --workspace
+        cargo clippy --workspace --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -D clippy::nursery -D clippy::dbg-macro -A clippy::missing-panics-doc
+        cargo build --workspace
+        cargo test --workspace
