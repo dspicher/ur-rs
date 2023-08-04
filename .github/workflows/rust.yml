@@ -17,7 +17,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Install crates
-      run: cargo install --debug cargo-sort cargo-rdme cargo-audit cargo-udeps
+      run: |
+        cargo install --debug cargo-quickinstall
+        cargo quickinstall cargo-sort cargo-rdme cargo-audit cargo-udeps
     - name: Lint
       run: |
         cargo fmt -- --check --config format_code_in_doc_comments=true
