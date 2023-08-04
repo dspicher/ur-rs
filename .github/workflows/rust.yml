@@ -17,7 +17,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Install crates
-      run: cargo install --debug cargo-sort cargo-rdme cargo-audit
+      run: cargo install --debug cargo-sort cargo-rdme cargo-audit cargo-udeps
     - name: Lint
       run: |
         cargo fmt -- --check --config format_code_in_doc_comments=true
@@ -28,3 +28,4 @@ jobs:
         cargo clippy --workspace --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -D clippy::nursery -D clippy::dbg-macro -A clippy::missing-panics-doc
         cargo build --workspace
         cargo test --workspace
+        export RUSTC_BOOTSTRAP=1 && cargo udeps && cd fuzz && cargo udeps
