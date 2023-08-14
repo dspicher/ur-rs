@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 base64 = "0.21"
-gloo = "0.9"
+gloo = "0.10"
 js-sys = "0.3"
 qrcode-generator = "4"
 ur = { path = "../.." }
