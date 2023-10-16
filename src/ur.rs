@@ -86,27 +86,22 @@ impl From<crate::fountain::Error> for Error {
 #[must_use]
 pub fn encode(data: &[u8], ur_type: &Type) -> String {
     let body = crate::bytewords::encode(data, crate::bytewords::Style::Minimal);
-    encode_ur(&[ur_type.encoding(), body])
-}
-
-#[must_use]
-fn encode_ur(items: &[String]) -> String {
-    alloc::format!("{}:{}", "ur", items.join("/"))
+    alloc::format!("ur:{}/{body}", ur_type.encoding())
 }
 
 /// The type of uniform resource.
-pub enum Type {
+pub enum Type<'a> {
     /// A `bytes` uniform resource.
     Bytes,
     /// A custom uniform resource.
-    Custom(String),
+    Custom(&'a str),
 }
 
-impl Type {
-    fn encoding(&self) -> String {
+impl<'a> Type<'a> {
+    const fn encoding(&self) -> &'a str {
         match self {
-            Self::Bytes => "bytes".into(),
-            Self::Custom(s) => s.clone(),
+            Self::Bytes => "bytes",
+            Self::Custom(s) => s,
         }
     }
 }
@@ -116,12 +111,12 @@ impl Type {
 /// # Examples
 ///
 /// See the [`crate::ur`] module documentation for an example.
-pub struct Encoder {
+pub struct Encoder<'a> {
     fountain: crate::fountain::Encoder,
-    ur_type: Type,
+    ur_type: Type<'a>,
 }
 
-impl Encoder {
+impl<'a> Encoder<'a> {
     /// Creates a new [`bytes`] [`Encoder`] for given a message payload.
     ///
     /// The emitted fountain parts will respect the maximum fragment length argument.
@@ -153,14 +148,10 @@ impl Encoder {
     /// will be returned.
     ///
     /// [`custom`]: Type::Custom
-    pub fn new(
-        message: &[u8],
-        max_fragment_length: usize,
-        s: impl Into<String>,
-    ) -> Result<Self, Error> {
+    pub fn new(message: &[u8], max_fragment_length: usize, s: &'a str) -> Result<Self, Error> {
         Ok(Self {
             fountain: crate::fountain::Encoder::new(message, max_fragment_length)?,
-            ur_type: Type::Custom(s.into()),
+            ur_type: Type::Custom(s),
         })
     }
 
@@ -176,11 +167,11 @@ impl Encoder {
     pub fn next_part(&mut self) -> Result<String, Error> {
         let part = self.fountain.next_part();
         let body = crate::bytewords::encode(&part.cbor()?, crate::bytewords::Style::Minimal);
-        Ok(encode_ur(&[
+        Ok(alloc::format!(
+            "ur:{}/{}/{body}",
             self.ur_type.encoding(),
-            part.sequence_id(),
-            body,
-        ]))
+            part.sequence_id()
+        ))
     }
 
     /// Returns the current count of already emitted parts.
@@ -417,7 +408,7 @@ mod tests {
 
         let data = crypto_seed().unwrap();
 
-        let e = encode(&data, &Type::Custom("crypto-request".into()));
+        let e = encode(&data, &Type::Custom("crypto-request"));
         let expected = "ur:crypto-request/oeadtpdagdaobncpftlnylfgfgmuztihbawfsgrtflaotaadwkoyadtaaohdhdcxvsdkfgkepezepefrrffmbnnbmdvahnptrdtpbtuyimmemweootjshsmhlunyeslnameyhsdi";
         assert_eq!(expected, e);
 

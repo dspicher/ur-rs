@@ -14,7 +14,7 @@ pub enum Msg {
 }
 
 pub struct App {
-    encoder: ur::Encoder,
+    encoder: ur::Encoder<'static>,
     interval: Option<Interval>,
     current_part: Option<String>,
     input: String,
