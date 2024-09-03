@@ -104,6 +104,7 @@ fn encode_ur(items: &[String]) -> String {
 pub struct Encoder {
     fountain: crate::fountain::Encoder,
     ur_type: String,
+    message: Vec<u8>,
 }
 
 impl Encoder {
@@ -125,6 +126,7 @@ impl Encoder {
         ur_type: T,
     ) -> Result<Self, Error> {
         Ok(Self {
+            message: message.to_vec(),
             fountain: crate::fountain::Encoder::new(message, max_fragment_length)?,
             ur_type: ur_type.into(),
         })
@@ -143,6 +145,10 @@ impl Encoder {
         let part = self.fountain.next_part();
         let body = crate::bytewords::encode(&part.cbor()?, crate::bytewords::Style::Minimal);
         Ok(encode_ur(&[self.ur_type.clone(), part.sequence_id(), body]))
+    }
+
+    pub fn get_single_part(&self) -> Result<String, Error> {
+        Ok(encode(&self.message, self.ur_type.clone()))
     }
 
     /// Returns the current count of already emitted parts.
