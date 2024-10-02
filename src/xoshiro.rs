@@ -52,7 +52,7 @@ impl Xoshiro256 {
 
     pub fn choose_degree(&mut self, length: usize) -> u32 {
         let degree_weights: Vec<f64> = (1..=length).map(|x| 1.0 / x as f64).collect();
-        let mut sampler = crate::sampler::Weighted::new(degree_weights);
+        let sampler = crate::sampler::Weighted::new(degree_weights);
         sampler.next(self) + 1
     }
 }

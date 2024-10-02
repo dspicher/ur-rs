@@ -55,7 +55,7 @@ impl Weighted {
     }
 
     #[allow(clippy::cast_sign_loss)]
-    pub fn next(&mut self, xoshiro: &mut crate::xoshiro::Xoshiro256) -> u32 {
+    pub fn next(&self, xoshiro: &mut crate::xoshiro::Xoshiro256) -> u32 {
         let r1 = xoshiro.next_double();
         let r2 = xoshiro.next_double();
         let n = self.probs.len();
@@ -76,7 +76,7 @@ mod tests {
     fn test_sampler() {
         let weights = vec![1.0, 2.0, 4.0, 8.0];
         let mut xoshiro = crate::xoshiro::Xoshiro256::from("Wolf");
-        let mut sampler = Weighted::new(weights);
+        let sampler = Weighted::new(weights);
 
         let expected_samples = vec![
             3, 3, 3, 3, 3, 3, 3, 0, 2, 3, 3, 3, 3, 1, 2, 2, 1, 3, 3, 2, 3, 3, 1, 1, 2, 1, 1, 3, 1,
