@@ -7,7 +7,7 @@ Rust Uniform Resources
 
 <!-- cargo-rdme start -->
 
-`ur` is a crate to interact with ["uniform resource"](https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-005-ur.md) encodings of binary data.
+`ur` is a crate to interact with [`uniform resource`](https://github.com/BlockchainCommons/Research/blob/master/papers/bcr-2020-005-ur.md) encodings of binary data.
 The encoding scheme is optimized for transport in URIs and QR codes.
 
 The [`ur::Encoder`] allows a byte payload to be transmissioned in
