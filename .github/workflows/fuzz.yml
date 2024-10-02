@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.63
+          toolchain: 1.65
           override: true
           profile: minimal
       - run: cargo install honggfuzz
