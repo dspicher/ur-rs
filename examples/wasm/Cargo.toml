@@ -6,7 +6,7 @@ authors = ["Dominik Spicher <dominikspicher@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-base64 = "0.21"
+base64 = "0.22"
 gloo = "0.10"
 js-sys = "0.3"
 qrcode-generator = "4"
