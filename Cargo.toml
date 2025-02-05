@@ -14,7 +14,6 @@ repository = "https://github.com/dspicher/ur-rs/"
 bitcoin_hashes = { version = "0.16", default-features = false }
 crc = "3"
 minicbor = { version = "0.25", features = ["alloc"] }
-phf = { version = "0.11", features = ["macros"], default-features = false }
 rand_xoshiro = "0.6"
 
 [dev-dependencies]
