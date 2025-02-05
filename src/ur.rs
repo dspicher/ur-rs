@@ -397,11 +397,11 @@ mod tests {
             #[rustfmt::skip]
             e.map(2)?
                 // 2.1 UUID: tag 37 type bytes(16)
-                .u8(1)?.tag(Tag::Unassigned(37))?.bytes(&uuid)?
+                .u8(1)?.tag(Tag::new(37))?.bytes(&uuid)?
                 // 2.2 crypto-seed: tag 500 type map
-                .u8(2)?.tag(Tag::Unassigned(500))?.map(1)?
+                .u8(2)?.tag(Tag::new(500))?.map(1)?
                 // 2.2.1 crypto-seed-digest: tag 600 type bytes(32)
-                .u8(1)?.tag(Tag::Unassigned(600))?.bytes(&seed_digest)?;
+                .u8(1)?.tag(Tag::new(600))?.bytes(&seed_digest)?;
 
             Ok(e.into_writer())
         }
