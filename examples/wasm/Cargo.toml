@@ -13,4 +13,4 @@ qrcode-generator = "4"
 ur = { path = "../.." }
 wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = ["Event","EventTarget","InputEvent"] }
-yew = { version = "0.20", features = ["csr"] }
+yew = { version = "0.21", features = ["csr"] }
