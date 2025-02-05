@@ -1103,4 +1103,26 @@ mod tests {
             Err(Error::CborDecode(e)) if e.to_string().contains("converting u64 to u32")
         ));
     }
+
+    #[test]
+    fn test_error_formatting() {
+        assert_eq!(
+            super::Error::EmptyMessage.to_string(),
+            "expected non-empty message"
+        );
+        assert_eq!(
+            super::Error::EmptyPart.to_string(),
+            "expected non-empty part"
+        );
+        assert_eq!(
+            super::Error::InvalidFragmentLen.to_string(),
+            "expected positive maximum fragment length"
+        );
+        assert_eq!(
+            super::Error::InconsistentPart.to_string(),
+            "part is inconsistent with previous ones"
+        );
+        assert_eq!(super::Error::ExpectedItem.to_string(), "expected item");
+        assert_eq!(super::Error::InvalidPadding.to_string(), "invalid padding");
+    }
 }
