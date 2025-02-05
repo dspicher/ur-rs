@@ -820,4 +820,18 @@ mod tests {
         assert_eq!(encode(&input, Style::Standard), encoded);
         assert_eq!(encode(&input, Style::Minimal), encoded_minimal);
     }
+
+    #[test]
+    fn test_error_formatting() {
+        assert_eq!(super::Error::InvalidWord.to_string(), "invalid word");
+        assert_eq!(
+            super::Error::InvalidChecksum.to_string(),
+            "invalid checksum"
+        );
+        assert_eq!(super::Error::InvalidLength.to_string(), "invalid length");
+        assert_eq!(
+            super::Error::NonAscii.to_string(),
+            "bytewords string contains non-ASCII characters"
+        );
+    }
 }

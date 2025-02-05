@@ -465,4 +465,22 @@ mod tests {
             "ur:my-scheme/1-2/lpadaobkcywkwmhfwnfeghihjtcxiansvomopr"
         );
     }
+
+    #[test]
+    fn test_error_formatting() {
+        assert_eq!(super::Error::InvalidScheme.to_string(), "Invalid scheme");
+        assert_eq!(
+            super::Error::TypeUnspecified.to_string(),
+            "No type specified"
+        );
+        assert_eq!(
+            super::Error::InvalidCharacters.to_string(),
+            "Type contains invalid characters"
+        );
+        assert_eq!(super::Error::InvalidIndices.to_string(), "Invalid indices");
+        assert_eq!(
+            super::Error::NotMultiPart.to_string(),
+            "Can't decode single-part UR as multi-part"
+        );
+    }
 }
