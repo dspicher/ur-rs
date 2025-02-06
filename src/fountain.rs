@@ -8,12 +8,8 @@
 //! A seeded `Xoshiro` RNG ensures that the receiver can reconstruct which segments
 //! were combined into the part.
 //! ```
-//! let xor = |a: &[u8], b: &[u8]| {
-//!     a.iter()
-//!         .zip(b.iter())
-//!         .map(|(&x1, &x2)| x1 ^ x2)
-//!         .collect::<Vec<_>>()
-//! };
+//! let xor =
+//!     |a: &[u8], b: &[u8]| -> Vec<_> { a.iter().zip(b.iter()).map(|(x1, x2)| x1 ^ x2).collect() };
 //!
 //! let data = String::from("Ten chars!");
 //! let max_length = 4;
