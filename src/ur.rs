@@ -491,4 +491,16 @@ mod tests {
             "can't decode single-part UR as multi-part"
         );
     }
+
+    #[test]
+    fn test_not_multipart() {
+        let mut decoder = Decoder::default();
+        assert_eq!(
+            decoder
+                .receive("ur:bytes/iehsjyhspmwfwfia")
+                .unwrap_err()
+                .to_string(),
+            "can't decode single-part UR as multi-part"
+        );
+    }
 }
