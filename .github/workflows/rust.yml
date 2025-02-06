@@ -19,10 +19,11 @@ jobs:
     - name: Install crates
       run: |
         cargo install --debug cargo-quickinstall
-        cargo quickinstall cargo-sort cargo-rdme cargo-audit cargo-udeps cargo-machete
+        cargo quickinstall cargo-sort cargo-rdme cargo-audit cargo-udeps cargo-machete taplo-cli
     - name: Lint
       run: |
         cargo fmt -- --check --config format_code_in_doc_comments=true
+        git ls-files | grep ".toml$" | taplo fmt --check
         cargo rdme --check
         cargo sort --workspace --check
         cargo audit -D warnings
