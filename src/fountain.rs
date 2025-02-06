@@ -1129,4 +1129,17 @@ mod tests {
         assert_eq!(super::Error::ExpectedItem.to_string(), "expected item");
         assert_eq!(super::Error::InvalidPadding.to_string(), "invalid padding");
     }
+
+    #[test]
+    fn test_invalid_padding() {
+        let mut encoder = Encoder::new(b"Hello world", 20).unwrap();
+        let mut part = encoder.next_part();
+        part.message_length -= 1;
+        let mut decoder = Decoder::default();
+        decoder.receive(part).unwrap();
+        assert_eq!(
+            decoder.message().unwrap_err().to_string(),
+            "invalid padding"
+        );
+    }
 }
