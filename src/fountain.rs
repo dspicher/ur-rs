@@ -102,8 +102,8 @@ pub enum Error {
 impl core::fmt::Display for Error {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::CborDecode(e) => write!(f, "{e}"),
-            Self::CborEncode(e) => write!(f, "{e}"),
+            Self::CborDecode(e) => write!(f, "minicbor decoding error: {e}"),
+            Self::CborEncode(e) => write!(f, "minicbor encoding error: {e}"),
             Self::EmptyMessage => write!(f, "expected non-empty message"),
             Self::EmptyPart => write!(f, "expected non-empty part"),
             Self::InvalidFragmentLen => write!(f, "expected positive maximum fragment length"),
@@ -1102,6 +1102,14 @@ mod tests {
 
     #[test]
     fn test_error_formatting() {
+        assert_eq!(
+            super::Error::from(minicbor::decode::Error::end_of_input()).to_string(),
+            "minicbor decoding error: end of input bytes"
+        );
+        assert_eq!(
+            super::Error::from(minicbor::encode::Error::message("error")).to_string(),
+            "minicbor encoding error: error"
+        );
         assert_eq!(
             super::Error::EmptyMessage.to_string(),
             "expected non-empty message"
