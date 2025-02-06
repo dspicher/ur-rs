@@ -919,7 +919,7 @@ mod tests {
         let mut decoder = Decoder::default();
         let part = encoder.next_part();
         assert_eq!(
-            part.data,
+            part.data(),
             vec![0x91, 0x6e, 0xc6, 0x5c, 0xf7, 0x7c, 0xad, 0xf5, 0x5c, 0xd7]
         );
         assert!(decoder.receive(part.clone()).unwrap());
