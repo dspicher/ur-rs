@@ -50,13 +50,13 @@ pub enum Error {
 impl core::fmt::Display for Error {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::Bytewords(e) => write!(f, "{e}"),
-            Self::Fountain(e) => write!(f, "{e}"),
-            Self::InvalidScheme => write!(f, "Invalid scheme"),
-            Self::TypeUnspecified => write!(f, "No type specified"),
-            Self::InvalidCharacters => write!(f, "Type contains invalid characters"),
-            Self::InvalidIndices => write!(f, "Invalid indices"),
-            Self::NotMultiPart => write!(f, "Can't decode single-part UR as multi-part"),
+            Self::Bytewords(e) => write!(f, "bytewords: {e}"),
+            Self::Fountain(e) => write!(f, "fountain: {e}"),
+            Self::InvalidScheme => write!(f, "invalid scheme"),
+            Self::TypeUnspecified => write!(f, "no type specified"),
+            Self::InvalidCharacters => write!(f, "type contains invalid characters"),
+            Self::InvalidIndices => write!(f, "invalid indices"),
+            Self::NotMultiPart => write!(f, "can't decode single-part UR as multi-part"),
         }
     }
 }
@@ -468,19 +468,27 @@ mod tests {
 
     #[test]
     fn test_error_formatting() {
-        assert_eq!(super::Error::InvalidScheme.to_string(), "Invalid scheme");
+        assert_eq!(
+            super::Error::from(crate::bytewords::Error::InvalidChecksum).to_string(),
+            "bytewords: invalid checksum"
+        );
+        assert_eq!(
+            super::Error::from(crate::fountain::Error::EmptyPart).to_string(),
+            "fountain: expected non-empty part"
+        );
+        assert_eq!(super::Error::InvalidScheme.to_string(), "invalid scheme");
         assert_eq!(
             super::Error::TypeUnspecified.to_string(),
-            "No type specified"
+            "no type specified"
         );
         assert_eq!(
             super::Error::InvalidCharacters.to_string(),
-            "Type contains invalid characters"
+            "type contains invalid characters"
         );
-        assert_eq!(super::Error::InvalidIndices.to_string(), "Invalid indices");
+        assert_eq!(super::Error::InvalidIndices.to_string(), "invalid indices");
         assert_eq!(
             super::Error::NotMultiPart.to_string(),
-            "Can't decode single-part UR as multi-part"
+            "can't decode single-part UR as multi-part"
         );
     }
 }
