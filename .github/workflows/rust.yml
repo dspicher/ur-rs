@@ -29,7 +29,6 @@ jobs:
         cargo audit -D warnings
         cargo deny check licenses
         cargo machete
-        cargo check --workspace
         cargo clippy --workspace --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -D clippy::dbg-macro -A clippy::missing-panics-doc
         cargo build --workspace
         cargo test --workspace
