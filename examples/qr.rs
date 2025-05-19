@@ -3,7 +3,8 @@ use qrcode::QrCode;
 use std::io::Write;
 
 fn main() {
-    let mut encoder = ur::Encoder::bytes(std::env::args().last().unwrap().as_bytes(), 5).unwrap();
+    let mut encoder =
+        ur::Encoder::bytes(std::env::args().next_back().unwrap().as_bytes(), 5).unwrap();
     let mut stdout = std::io::stdout();
     loop {
         let ur = encoder.next_part().unwrap();

@@ -335,7 +335,7 @@ impl Decoder {
             let to_process: Vec<Vec<usize>> = self
                 .buffer
                 .keys()
-                .filter(|&idxs| idxs.iter().any(|&idx| idx == index))
+                .filter(|&idxs| idxs.contains(&index))
                 .cloned()
                 .collect();
             for indexes in to_process {
