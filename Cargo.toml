@@ -7,7 +7,7 @@ description = "A Rust implementation of Uniform Resources"
 license = "MIT"
 version = "0.4.1"
 authors = ["Dominik Spicher <dominikspicher@gmail.com>"]
-edition = "2021"
+edition = "2024"
 repository = "https://github.com/dspicher/ur-rs/"
 
 [dependencies]

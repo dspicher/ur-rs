@@ -48,11 +48,11 @@ mod constants;
 mod sampler;
 mod xoshiro;
 
-pub use self::ur::decode;
-pub use self::ur::encode;
 pub use self::ur::Decoder;
 pub use self::ur::Encoder;
 pub use self::ur::Type;
+pub use self::ur::decode;
+pub use self::ur::encode;
 
 #[must_use]
 pub(crate) const fn crc32() -> crc::Crc<u32> {
