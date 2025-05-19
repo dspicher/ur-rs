@@ -5,7 +5,7 @@
 //!
 //! # Standard style
 //! ```
-//! use ur::bytewords::{decode, encode, Style};
+//! use ur::bytewords::{Style, decode, encode};
 //! let data = "Some bytes".as_bytes();
 //! let encoded = encode(data, Style::Standard);
 //! assert_eq!(
@@ -17,7 +17,7 @@
 //!
 //! # URI style
 //! ```
-//! use ur::bytewords::{decode, encode, Style};
+//! use ur::bytewords::{Style, decode, encode};
 //! let data = "Some bytes".as_bytes();
 //! let encoded = encode(data, Style::Uri);
 //! assert_eq!(
@@ -29,7 +29,7 @@
 //!
 //! # Minimal style
 //! ```
-//! use ur::bytewords::{decode, encode, Style};
+//! use ur::bytewords::{Style, decode, encode};
 //! let data = "Some binary data".as_bytes();
 //! let encoded = encode(data, Style::Minimal);
 //! assert_eq!(encoded, "gujljnihcxidinjthsjpkkcxiehsjyhsnsgdmkht");
@@ -83,7 +83,7 @@ impl std::error::Error for Error {}
 /// # Examples
 ///
 /// ```
-/// use ur::bytewords::{decode, Style};
+/// use ur::bytewords::{Style, decode};
 /// assert_eq!(
 ///     decode("able tied also webs lung", Style::Standard).unwrap(),
 ///     vec![0]
@@ -161,7 +161,7 @@ fn strip_checksum(mut data: Vec<u8>) -> Result<Vec<u8>, Error> {
 /// # Examples
 ///
 /// ```
-/// use ur::bytewords::{encode, Style};
+/// use ur::bytewords::{Style, encode};
 /// assert_eq!(encode(&[0], Style::Standard), "able tied also webs lung");
 /// assert_eq!(encode(&[0], Style::Uri), "able-tied-also-webs-lung");
 /// // Notice how the minimal encoding consists of the start and end letters of the bytewords
