@@ -17,7 +17,7 @@ minicbor = { version = "0.26", features = ["alloc"] }
 rand_xoshiro = "0.7"
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.6"
 hex = "0.4"
 qrcode = { version = "0.14", default-features = false }
 
