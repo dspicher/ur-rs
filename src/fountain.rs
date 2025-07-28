@@ -231,7 +231,7 @@ impl Encoder {
     /// assert_eq!(encoder.fragment_count(), 2);
     /// ```
     #[must_use]
-    pub fn fragment_count(&self) -> usize {
+    pub const fn fragment_count(&self) -> usize {
         self.parts.len()
     }
 
@@ -255,7 +255,7 @@ impl Encoder {
     /// [`fragment_count`]: Encoder::fragment_count
     /// [`current_sequence`]: Encoder::current_sequence
     #[must_use]
-    pub fn complete(&self) -> bool {
+    pub const fn complete(&self) -> bool {
         self.current_sequence >= self.parts.len()
     }
 }
