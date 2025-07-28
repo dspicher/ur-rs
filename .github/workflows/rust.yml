@@ -29,7 +29,7 @@ jobs:
         cargo audit -D warnings
         cargo deny check licenses
         cargo machete
-        cargo clippy --workspace --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -D clippy::dbg-macro -A clippy::missing-panics-doc
+        cargo clippy --workspace --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -D clippy::dbg-macro -A clippy::missing-panics-doc -D clippy::nursery
         cargo build --workspace
         cargo test --workspace
         export RUSTC_BOOTSTRAP=1 && cargo udeps && cd fuzz && cargo udeps
