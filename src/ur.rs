@@ -198,7 +198,7 @@ impl<'a> Encoder<'a> {
     /// assert_eq!(encoder.fragment_count(), 2);
     /// ```
     #[must_use]
-    pub fn fragment_count(&self) -> usize {
+    pub const fn fragment_count(&self) -> usize {
         self.fountain.fragment_count()
     }
 }
