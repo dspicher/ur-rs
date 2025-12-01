@@ -15,7 +15,7 @@ default = ["std"]
 std = []
 
 [dependencies]
-bitcoin_hashes = { version = "0.16", default-features = false }
+bitcoin_hashes = { version = "0.18", default-features = false }
 crc = "3"
 minicbor = { version = "2.0", features = ["alloc"] }
 rand_xoshiro = "0.7"
