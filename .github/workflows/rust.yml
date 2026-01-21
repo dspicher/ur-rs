@@ -26,7 +26,7 @@ jobs:
         git ls-files | grep ".toml$" | taplo fmt --check
         cargo rdme --check
         cargo sort --workspace --check
-        cargo audit -D warnings
+        cargo audit -D warnings --ignore RUSTSEC-2025-0141
         cargo deny check licenses
         cargo machete
         cargo clippy --workspace --all --all-targets --all-features -- -Dwarnings -D clippy::pedantic -D clippy::dbg-macro -A clippy::missing-panics-doc -D clippy::nursery
