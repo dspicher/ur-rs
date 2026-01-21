@@ -115,7 +115,7 @@ pub fn decode(encoded: &str, style: Style) -> Result<Vec<u8>, Error> {
 }
 
 fn decode_minimal(encoded: &str) -> Result<Vec<u8>, Error> {
-    if encoded.len() % 2 != 0 {
+    if !encoded.len().is_multiple_of(2) {
         return Err(Error::InvalidLength);
     }
 

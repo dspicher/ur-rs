@@ -96,7 +96,7 @@ impl Component for App {
             |part| {
                 html! {
                     <div id="part">
-                        <code>{ part.to_string() }</code>
+                        <code>{ part.clone() }</code>
                     </div>
                 }
             },
