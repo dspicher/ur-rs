@@ -1,7 +1,7 @@
 extern crate alloc;
 use alloc::vec::Vec;
 use rand_xoshiro::Xoshiro256StarStar;
-use rand_xoshiro::rand_core::RngCore;
+use rand_xoshiro::rand_core::Rng;
 use rand_xoshiro::rand_core::SeedableRng;
 
 #[allow(clippy::module_name_repetitions)]
