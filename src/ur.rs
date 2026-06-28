@@ -382,6 +382,30 @@ impl Decoder {
     pub fn message(&self) -> Result<Option<Vec<u8>>, Error> {
         self.fountain.message().map_err(Error::from)
     }
+
+    /// Returns the number of source fragments that have been resolved so far,
+    /// either received directly or reconstructed via XOR elimination.
+    ///
+    /// Returns `None` before any part has been received. Once decoding has
+    /// started, returns `Some(0..K)`; `Some(0)` means a part was received but
+    /// no fragment has resolved yet (e.g. only complex XOR parts seen so far).
+    /// Once [`complete`] is true, this equals [`fragment_count`] (wrapped in
+    /// `Some`).
+    ///
+    /// [`complete`]: Decoder::complete
+    /// [`fragment_count`]: Decoder::fragment_count
+    #[must_use]
+    pub fn resolved_fragment_count(&self) -> Option<usize> {
+        self.fountain.resolved_fragment_count()
+    }
+
+    /// Returns `K`, the total number of source fragments the message was split
+    /// into. This is `0` until the first part has been received, since the
+    /// fragment count is learned from part metadata.
+    #[must_use]
+    pub const fn fragment_count(&self) -> usize {
+        self.fountain.fragment_count()
+    }
 }
 
 #[cfg(test)]
@@ -482,6 +506,42 @@ mod tests {
             decoder.receive(&encoder.next_part().unwrap()).unwrap();
         }
         assert_eq!(decoder.message().unwrap(), Some(ur));
+    }
+
+    #[test]
+    fn test_decoder_progress_accessors() {
+        let ur = make_message_ur(32767, "Wolf");
+        let mut encoder = Encoder::bytes(&ur, 1000).unwrap();
+        let mut decoder = Decoder::default();
+
+        // Before any part received: nothing resolved, no fragments known.
+        assert_eq!(decoder.resolved_fragment_count(), None);
+        assert_eq!(decoder.fragment_count(), 0);
+
+        // Feed parts one at a time; after the first part, fragment_count
+        // is known (== encoder.fragment_count()) and resolved grows.
+        let part = encoder.next_part().unwrap();
+        decoder.receive(&part).unwrap();
+        assert_eq!(decoder.resolved_fragment_count(), Some(1));
+        assert_eq!(decoder.fragment_count(), encoder.fragment_count());
+
+        // Continue until complete; resolved must reach fragment_count.
+        let mut prev_resolved = 1;
+        while !decoder.complete() {
+            let part = encoder.next_part().unwrap();
+            decoder.receive(&part).unwrap();
+            let now = decoder.resolved_fragment_count().unwrap();
+            assert!(now >= prev_resolved, "resolved count should not decrease");
+            assert!(
+                now <= decoder.fragment_count(),
+                "resolved must not exceed K"
+            );
+            prev_resolved = now;
+        }
+        assert_eq!(
+            decoder.resolved_fragment_count(),
+            Some(decoder.fragment_count())
+        );
     }
 
     #[test]
