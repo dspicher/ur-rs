@@ -31,7 +31,7 @@ impl Xoshiro256 {
     }
 
     pub fn next_double(&mut self) -> f64 {
-        self.next() as f64 / (u64::MAX as f64 + 1.0)
+        unit_interval(self.next())
     }
 
     #[allow(clippy::cast_sign_loss)]
@@ -54,6 +54,12 @@ impl Xoshiro256 {
         let sampler = crate::sampler::Weighted::new(degree_weights);
         sampler.next(self) + 1
     }
+}
+
+#[allow(clippy::cast_precision_loss)]
+fn unit_interval(value: u64) -> f64 {
+    const SCALE: f64 = 1.0 / ((1_u64 << 53) as f64);
+    ((value >> 11) as f64) * SCALE
 }
 
 impl From<&str> for Xoshiro256 {
@@ -154,6 +160,12 @@ mod tests {
         for e in expected {
             assert_eq!(rng.next_int(1, 10), e);
         }
+    }
+
+    #[test]
+    fn test_unit_interval_excludes_one() {
+        assert!(unit_interval(u64::MAX) < 1.0);
+        assert_eq!(unit_interval(0).to_bits(), 0.0_f64.to_bits());
     }
 
     #[test]
