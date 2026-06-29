@@ -111,7 +111,7 @@ pub fn decode(encoded: &str, style: Style) -> Result<Vec<u8>, Error> {
         Style::Uri => '-',
         Style::Minimal => return decode_minimal(encoded),
     };
-    decode_parts(&mut encoded.split(separator))
+    decode_parts(&mut encoded.split(separator), false)
 }
 
 fn decode_minimal(encoded: &str) -> Result<Vec<u8>, Error> {
@@ -123,21 +123,27 @@ fn decode_minimal(encoded: &str) -> Result<Vec<u8>, Error> {
         &mut (0..encoded.len())
             .step_by(2)
             .map(|idx| encoded.get(idx..idx + 2).unwrap()),
+        true,
     )
 }
 
-fn encoded_byte(str: &str) -> Option<u8> {
-    let mut chars = str.chars();
+fn encoded_byte(part: &str, minimal: bool) -> Option<u8> {
+    let mut chars = part.chars();
     let hash =
         usize::try_from((25 * (chars.next()? as u32) + 11 * chars.last()? as u32) % 628).ok()?;
-    crate::constants::BYTES_INDEXED_BY_HASH[hash]
+    let byte = crate::constants::BYTES_INDEXED_BY_HASH[hash]?;
+    let expected = if minimal {
+        crate::constants::MINIMALS[byte as usize]
+    } else {
+        crate::constants::WORDS[byte as usize]
+    };
+    (part == expected).then_some(byte)
 }
 
-#[allow(clippy::too_many_lines)]
-fn decode_parts(parts: &mut dyn Iterator<Item = &str>) -> Result<Vec<u8>, Error> {
+fn decode_parts(parts: &mut dyn Iterator<Item = &str>, minimal: bool) -> Result<Vec<u8>, Error> {
     strip_checksum(
         parts
-            .map(encoded_byte)
+            .map(|part| encoded_byte(part, minimal))
             .collect::<Option<Vec<_>>>()
             .ok_or(Error::InvalidWord)?,
     )
@@ -243,6 +249,20 @@ mod tests {
         assert_eq!(
             decode("aeadaolazojendeowf", Style::Minimal).unwrap_err(),
             Error::InvalidChecksum
+        );
+
+        // invalid words that hash to valid byte values
+        assert_eq!(
+            decode("axxe tied also webs lung", Style::Standard).unwrap_err(),
+            Error::InvalidWord
+        );
+        assert_eq!(
+            decode("axxe-tied-also-webs-lung", Style::Uri).unwrap_err(),
+            Error::InvalidWord
+        );
+        assert_eq!(
+            decode("abmuammdwe", Style::Minimal).unwrap_err(),
+            Error::InvalidWord
         );
 
         // too short
