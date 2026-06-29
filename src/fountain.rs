@@ -93,6 +93,8 @@ pub enum Error {
     EmptyPart,
     /// Fragment length should be a positive integer greater than 0.
     InvalidFragmentLen,
+    /// Part sequence numbers must start at 1.
+    InvalidSequence,
     /// Received part is inconsistent with previous ones.
     InconsistentPart,
     /// An item was expected.
@@ -110,6 +112,7 @@ impl core::fmt::Display for Error {
             Self::EmptyMessage => write!(f, "expected non-empty message"),
             Self::EmptyPart => write!(f, "expected non-empty part"),
             Self::InvalidFragmentLen => write!(f, "expected positive maximum fragment length"),
+            Self::InvalidSequence => write!(f, "invalid sequence"),
             Self::InconsistentPart => write!(f, "part is inconsistent with previous ones"),
             Self::ExpectedItem => write!(f, "expected item"),
             Self::InvalidPadding => write!(f, "invalid padding"),
@@ -301,6 +304,9 @@ impl Decoder {
         // Only receive parts that will yield data.
         if part.sequence_count == 0 || part.data.is_empty() || part.message_length == 0 {
             return Err(Error::EmptyPart);
+        }
+        if part.sequence == 0 {
+            return Err(Error::InvalidSequence);
         }
 
         if self.received.is_empty() {
@@ -981,6 +987,15 @@ mod tests {
         ));
         part.sequence_count = 8;
 
+        // Check sequence.
+        part.sequence = 0;
+        assert!(matches!(
+            decoder.receive(part.clone()),
+            Err(Error::InvalidSequence)
+        ));
+        assert!(!decoder.validate(&part));
+        part.sequence = 12;
+
         // Check message_length.
         part.message_length = 0;
         assert!(matches!(
@@ -1126,6 +1141,10 @@ mod tests {
         assert_eq!(
             super::Error::InvalidFragmentLen.to_string(),
             "expected positive maximum fragment length"
+        );
+        assert_eq!(
+            super::Error::InvalidSequence.to_string(),
+            "invalid sequence"
         );
         assert_eq!(
             super::Error::InconsistentPart.to_string(),
