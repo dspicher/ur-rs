@@ -24,6 +24,7 @@ jobs:
       run: |
         cargo fmt -- --check --config format_code_in_doc_comments=true
         git ls-files | grep ".toml$" | taplo fmt --check
+        cargo rdme install-rust-toolchain-for-intralinks
         cargo rdme --check
         cargo sort --workspace --check
         cargo audit -D warnings --ignore RUSTSEC-2025-0141
