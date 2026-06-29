@@ -19,6 +19,6 @@ fn main() {
             .write_all(format!("{ur}\n\n\n\n").as_bytes())
             .unwrap();
         stdout.flush().unwrap();
-        std::thread::sleep(std::time::Duration::from_millis(1000));
+        std::thread::sleep(std::time::Duration::from_secs(1));
     }
 }
