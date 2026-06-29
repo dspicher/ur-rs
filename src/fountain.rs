@@ -85,6 +85,8 @@ pub enum Error {
     CborDecode(minicbor::decode::Error),
     /// CBOR encoding error.
     CborEncode(minicbor::encode::Error<Infallible>),
+    /// The reconstructed message doesn't match the expected checksum.
+    InvalidChecksum,
     /// Expected non-empty message.
     EmptyMessage,
     /// Expected non-empty part.
@@ -104,6 +106,7 @@ impl core::fmt::Display for Error {
         match self {
             Self::CborDecode(e) => write!(f, "minicbor decoding error: {e}"),
             Self::CborEncode(e) => write!(f, "minicbor encoding error: {e}"),
+            Self::InvalidChecksum => write!(f, "invalid checksum"),
             Self::EmptyMessage => write!(f, "expected non-empty message"),
             Self::EmptyPart => write!(f, "expected non-empty part"),
             Self::InvalidFragmentLen => write!(f, "expected positive maximum fragment length"),
@@ -471,12 +474,14 @@ impl Decoder {
         {
             return Err(Error::InvalidPadding);
         }
-        Ok(Some(
-            combined
-                .get(..self.message_length)
-                .ok_or(Error::ExpectedItem)?
-                .to_vec(),
-        ))
+        let message = combined
+            .get(..self.message_length)
+            .ok_or(Error::ExpectedItem)?
+            .to_vec();
+        if crate::crc32().checksum(&message) != self.checksum {
+            return Err(Error::InvalidChecksum);
+        }
+        Ok(Some(message))
     }
 }
 
@@ -1107,6 +1112,10 @@ mod tests {
             "minicbor encoding error: error"
         );
         assert_eq!(
+            super::Error::InvalidChecksum.to_string(),
+            "invalid checksum"
+        );
+        assert_eq!(
             super::Error::EmptyMessage.to_string(),
             "expected non-empty message"
         );
@@ -1136,6 +1145,24 @@ mod tests {
         assert_eq!(
             decoder.message().unwrap_err().to_string(),
             "invalid padding"
+        );
+    }
+
+    #[test]
+    fn test_invalid_checksum() {
+        let mut decoder = Decoder::default();
+        let part = Part {
+            sequence: 1,
+            sequence_count: 1,
+            message_length: 3,
+            checksum: 0,
+            data: b"bad".to_vec(),
+        };
+        decoder.receive(part).unwrap();
+
+        assert_eq!(
+            decoder.message().unwrap_err().to_string(),
+            "invalid checksum"
         );
     }
 }
