@@ -128,9 +128,14 @@ fn decode_minimal(encoded: &str) -> Result<Vec<u8>, Error> {
 }
 
 fn encoded_byte(part: &str, minimal: bool) -> Option<u8> {
-    let mut chars = part.chars();
+    let bytes = part.as_bytes();
+    let expected_len = if minimal { 2 } else { 4 };
+    if bytes.len() != expected_len {
+        return None;
+    }
     let hash =
-        usize::try_from((25 * (chars.next()? as u32) + 11 * chars.last()? as u32) % 628).ok()?;
+        usize::try_from((25 * u32::from(bytes[0]) + 11 * u32::from(bytes[expected_len - 1])) % 628)
+            .ok()?;
     let byte = crate::constants::BYTES_INDEXED_BY_HASH[hash]?;
     let expected = if minimal {
         crate::constants::MINIMALS[byte as usize]
