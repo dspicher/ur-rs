@@ -213,6 +213,9 @@ pub enum Kind {
     MultiPart,
 }
 
+type MultipartIndex = (usize, usize);
+type Decoded = (Kind, Vec<u8>, Option<MultipartIndex>);
+
 /// Decodes a single URI (either single- or multi-part)
 /// into a tuple consisting of the [`Kind`] and the data
 /// payload.
@@ -236,6 +239,11 @@ pub enum Kind {
 /// an invalid scheme different from "ur" or an invalid number
 /// of "/" separators.
 pub fn decode(value: &str) -> Result<(Kind, Vec<u8>), Error> {
+    let (kind, payload, _) = decode_with_indices(value)?;
+    Ok((kind, payload))
+}
+
+fn decode_with_indices(value: &str) -> Result<Decoded, Error> {
     let strip_scheme = value.strip_prefix("ur:").ok_or(Error::InvalidScheme)?;
     let (r#type, strip_type) = strip_scheme.split_once('/').ok_or(Error::TypeUnspecified)?;
 
@@ -250,19 +258,32 @@ pub fn decode(value: &str) -> Result<(Kind, Vec<u8>), Error> {
         None => Ok((
             Kind::SinglePart,
             crate::bytewords::decode(strip_type, crate::bytewords::Style::Minimal)?,
+            None,
         )),
         Some((indices, payload)) => {
-            let (idx, idx_total) = indices.split_once('-').ok_or(Error::InvalidIndices)?;
-            if idx.parse::<u16>().is_err() || idx_total.parse::<u16>().is_err() {
-                return Err(Error::InvalidIndices);
-            }
+            let indices = decode_indices(indices)?;
 
             Ok((
                 Kind::MultiPart,
                 crate::bytewords::decode(payload, crate::bytewords::Style::Minimal)?,
+                Some(indices),
             ))
         }
     }
+}
+
+fn decode_indices(indices: &str) -> Result<MultipartIndex, Error> {
+    let (idx, idx_total) = indices.split_once('-').ok_or(Error::InvalidIndices)?;
+    let idx = idx.parse::<usize>().map_err(|_| Error::InvalidIndices)?;
+    let idx_total = idx_total
+        .parse::<usize>()
+        .map_err(|_| Error::InvalidIndices)?;
+
+    if idx == 0 || idx_total == 0 {
+        return Err(Error::InvalidIndices);
+    }
+
+    Ok((idx, idx_total))
 }
 
 /// A uniform resource decoder able to receive URIs that encode a fountain part.
@@ -293,13 +314,18 @@ impl Decoder {
     ///
     /// In all these cases, an error will be returned.
     pub fn receive(&mut self, value: &str) -> Result<(), Error> {
-        let (kind, decoded) = decode(value)?;
+        let (kind, decoded, indices) = decode_with_indices(value)?;
         if kind != Kind::MultiPart {
             return Err(Error::NotMultiPart);
         }
 
-        self.fountain
-            .receive(crate::fountain::Part::from_cbor(decoded.as_slice())?)?;
+        let part = crate::fountain::Part::from_cbor(decoded.as_slice())?;
+        let (idx, idx_total) = indices.ok_or(Error::InvalidIndices)?;
+        if part.sequence() != idx || part.sequence_count() != idx_total {
+            return Err(Error::InvalidIndices);
+        }
+
+        self.fountain.receive(part)?;
         Ok(())
     }
 
@@ -448,6 +474,14 @@ mod tests {
             Err(Error::InvalidIndices)
         ));
         assert!(matches!(
+            decode("ur:bytes/0-1/aeadaolazmjendeoti"),
+            Err(Error::InvalidIndices)
+        ));
+        assert!(matches!(
+            decode("ur:bytes/1-0/aeadaolazmjendeoti"),
+            Err(Error::InvalidIndices)
+        ));
+        assert!(matches!(
             decode("ur:bytes/1-1/toomuch/aeadaolazmjendeoti"),
             Err(Error::InvalidIndices)
         ));
@@ -502,5 +536,18 @@ mod tests {
                 .to_string(),
             "can't decode single-part UR as multi-part"
         );
+    }
+
+    #[test]
+    fn test_decoder_rejects_mismatched_indices() {
+        let mut encoder = Encoder::bytes(b"Ten chars!", 5).unwrap();
+        let part = encoder.next_part().unwrap();
+        let tampered = part.replacen("/1-", "/2-", 1);
+
+        let mut decoder = Decoder::default();
+        assert!(matches!(
+            decoder.receive(&tampered),
+            Err(Error::InvalidIndices)
+        ));
     }
 }
