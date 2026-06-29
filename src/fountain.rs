@@ -549,6 +549,14 @@ impl Part {
         minicbor::decode(cbor).map_err(Error::from)
     }
 
+    pub(crate) const fn sequence(&self) -> usize {
+        self.sequence
+    }
+
+    pub(crate) const fn sequence_count(&self) -> usize {
+        self.sequence_count
+    }
+
     /// Returns the indexes of the message segments that were combined into this part.
     ///
     /// # Examples
