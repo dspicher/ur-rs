@@ -73,7 +73,12 @@ impl From<crate::fountain::Error> for Error {
     }
 }
 
-/// Encodes a data payload into a single URI
+/// Encodes a data payload into a single URI.
+///
+/// # Panics
+///
+/// Panics if the UR type is invalid. Use [`try_encode`] to handle invalid
+/// custom types as an error.
 ///
 /// # Examples
 ///
@@ -85,8 +90,28 @@ impl From<crate::fountain::Error> for Error {
 /// ```
 #[must_use]
 pub fn encode(data: &[u8], ur_type: &Type) -> String {
+    try_encode(data, ur_type).expect("UR type must be non-empty and ASCII alphanumeric or '-'")
+}
+
+/// Encodes a data payload into a single URI.
+///
+/// # Examples
+///
+/// ```
+/// assert_eq!(
+///     ur::ur::try_encode(b"data", &ur::Type::Bytes).unwrap(),
+///     "ur:bytes/iehsjyhspmwfwfia"
+/// );
+/// ```
+///
+/// # Errors
+///
+/// Returns [`Error::InvalidCharacters`] if the UR type is empty or contains
+/// characters other than ASCII letters, ASCII digits, or `-`.
+pub fn try_encode(data: &[u8], ur_type: &Type) -> Result<String, Error> {
+    validate_type(ur_type.encoding())?;
     let body = crate::bytewords::encode(data, crate::bytewords::Style::Minimal);
-    alloc::format!("ur:{}/{body}", ur_type.encoding())
+    Ok(alloc::format!("ur:{}/{body}", ur_type.encoding()))
 }
 
 /// The type of uniform resource.
@@ -149,6 +174,7 @@ impl<'a> Encoder<'a> {
     ///
     /// [`custom`]: Type::Custom
     pub fn new(message: &[u8], max_fragment_length: usize, s: &'a str) -> Result<Self, Error> {
+        validate_type(s)?;
         Ok(Self {
             fountain: crate::fountain::Encoder::new(message, max_fragment_length)?,
             ur_type: Type::Custom(s),
@@ -247,12 +273,7 @@ fn decode_with_indices(value: &str) -> Result<Decoded, Error> {
     let strip_scheme = value.strip_prefix("ur:").ok_or(Error::InvalidScheme)?;
     let (r#type, strip_type) = strip_scheme.split_once('/').ok_or(Error::TypeUnspecified)?;
 
-    if !r#type
-        .trim_start_matches(|c: char| c.is_ascii_alphanumeric() || c == '-')
-        .is_empty()
-    {
-        return Err(Error::InvalidCharacters);
-    }
+    validate_type(r#type)?;
 
     match strip_type.rsplit_once('/') {
         None => Ok((
@@ -284,6 +305,14 @@ fn decode_indices(indices: &str) -> Result<MultipartIndex, Error> {
     }
 
     Ok((idx, idx_total))
+}
+
+fn validate_type(s: &str) -> Result<(), Error> {
+    if s.is_empty() || !s.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-') {
+        return Err(Error::InvalidCharacters);
+    }
+
+    Ok(())
 }
 
 /// A uniform resource decoder able to receive URIs that encode a fountain part.
@@ -470,6 +499,10 @@ mod tests {
             Err(Error::InvalidCharacters)
         ));
         assert!(matches!(
+            decode("ur:/aeadaolazmjendeoti"),
+            Err(Error::InvalidCharacters)
+        ));
+        assert!(matches!(
             decode("ur:bytes/1-1a/aeadaolazmjendeoti"),
             Err(Error::InvalidIndices)
         ));
@@ -524,6 +557,22 @@ mod tests {
             super::Error::NotMultiPart.to_string(),
             "can't decode single-part UR as multi-part"
         );
+    }
+
+    #[test]
+    fn test_invalid_custom_type() {
+        assert!(matches!(
+            try_encode(b"data", &Type::Custom("bad/type")),
+            Err(Error::InvalidCharacters)
+        ));
+        assert!(matches!(
+            try_encode(b"data", &Type::Custom("")),
+            Err(Error::InvalidCharacters)
+        ));
+        assert!(matches!(
+            Encoder::new(b"data", 5, "bad/type"),
+            Err(Error::InvalidCharacters)
+        ));
     }
 
     #[test]
