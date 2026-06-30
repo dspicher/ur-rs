@@ -408,6 +408,34 @@ impl Decoder {
         self.message_length != 0 && self.decoded.len() == self.sequence_count
     }
 
+    /// Returns the number of source fragments that have been resolved so far,
+    /// either received directly or reconstructed via XOR elimination.
+    ///
+    /// Returns `None` before any part has been received. Once decoding has
+    /// started, returns `Some(0..K)`; `Some(0)` means a part was received but
+    /// no fragment has resolved yet (e.g. only complex XOR parts seen so far).
+    /// Once [`complete`] is true, this equals [`fragment_count`] (wrapped in
+    /// `Some`).
+    ///
+    /// [`complete`]: Decoder::complete
+    /// [`fragment_count`]: Decoder::fragment_count
+    #[must_use]
+    pub fn resolved_fragment_count(&self) -> Option<usize> {
+        if self.message_length == 0 {
+            None
+        } else {
+            Some(self.decoded.len())
+        }
+    }
+
+    /// Returns `K`, the total number of source fragments the message was split
+    /// into. This is `0` until the first part has been received, since the
+    /// fragment count is learned from part metadata.
+    #[must_use]
+    pub const fn fragment_count(&self) -> usize {
+        self.sequence_count
+    }
+
     /// Checks whether a [`Part`] is receivable by the decoder.
     /// This can fail if other parts were previously received whose
     /// metadata (such as number of segments) is inconsistent with the
