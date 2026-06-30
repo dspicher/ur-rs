@@ -411,29 +411,28 @@ impl Decoder {
     /// Returns the number of source fragments that have been resolved so far,
     /// either received directly or reconstructed via XOR elimination.
     ///
-    /// Before any part is received, this is `0`. Once [`complete`] is true,
-    /// it equals [`fragment_count`].
-    ///
-    /// # Examples
-    ///
-    /// See the [`crate::fountain`] module documentation for an example.
+    /// Returns `None` before any part has been received. Once decoding has
+    /// started, returns `Some(0..K)`; `Some(0)` means a part was received but
+    /// no fragment has resolved yet (e.g. only complex XOR parts seen so far).
+    /// Once [`complete`] is true, this equals [`fragment_count`] (wrapped in
+    /// `Some`).
     ///
     /// [`complete`]: Decoder::complete
     /// [`fragment_count`]: Decoder::fragment_count
     #[must_use]
-    pub fn resolved_fragment_count(&self) -> usize {
-        self.decoded.len()
+    pub fn resolved_fragment_count(&self) -> Option<usize> {
+        if self.message_length == 0 {
+            None
+        } else {
+            Some(self.decoded.len())
+        }
     }
 
     /// Returns `K`, the total number of source fragments the message was split
     /// into. This is `0` until the first part has been received, since the
     /// fragment count is learned from part metadata.
-    ///
-    /// # Examples
-    ///
-    /// See the [`crate::fountain`] module documentation for an example.
     #[must_use]
-    pub fn fragment_count(&self) -> usize {
+    pub const fn fragment_count(&self) -> usize {
         self.sequence_count
     }
 
