@@ -6,6 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.5.0](https://github.com/dspicher/ur-rs/releases/tag/0.5.0) - 2026-07-02
+ - Added `ur::try_encode`, which returns an error for invalid custom UR types instead of panicking.
+ - Added `ur::Decoder::resolved_fragment_count` and `ur::Decoder::fragment_count` for reporting multipart decode progress.
+ - Added `fountain::Decoder::resolved_fragment_count` and `fountain::Decoder::fragment_count` for reporting fountain decode progress.
+ - Validate custom UR types during single-part encoding, multipart encoder construction, and decoding. Custom types must be non-empty and contain only ASCII letters, ASCII digits, or `-`.
+ - Validate multipart UR indices more strictly: indices must be non-zero and the URI path indices must match the encoded fountain part metadata.
+ - Added `fountain::Error::InvalidChecksum` and checksum verification for decoded fountain messages.
+ - Added `fountain::Error::InvalidSequence` for fountain parts with sequence number `0`.
+ - Return `bytewords::Error::InvalidWord` for malformed bytewords whose hash collides with a valid byte value but whose spelling is invalid.
+ - Updated the crate to Rust 2024 edition.
+ - Updated public `minicbor` error types to `minicbor` 2.0.
+
 ## [0.4.1](https://github.com/dspicher/ur-rs/releases/tag/0.4.1) - 2023-10-16
  - Take a reference to custom UR type identifiers
 
