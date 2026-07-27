@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.5.1](https://github.com/dspicher/ur-rs/releases/tag/0.5.1) - 2026-07-27
+ - Document and assert 1.85 as the MSRV.
+
 ## [0.5.0](https://github.com/dspicher/ur-rs/releases/tag/0.5.0) - 2026-07-02
  - Added `ur::try_encode`, which returns an error for invalid custom UR types instead of panicking.
  - Added `ur::Decoder::resolved_fragment_count` and `ur::Decoder::fragment_count` for reporting multipart decode progress.
