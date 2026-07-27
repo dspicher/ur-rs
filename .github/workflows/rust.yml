@@ -10,6 +10,21 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  msrv:
+    name: MSRV (1.85)
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Install Rust 1.85
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: 1.85.0
+    - name: Check library
+      run: |
+        cargo check --package ur --lib
+        cargo check --package ur --lib --no-default-features
+
   build:
 
     runs-on: ubuntu-latest

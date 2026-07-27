@@ -430,6 +430,10 @@ mod tests {
 
     #[test]
     fn test_ur_encoder() {
+        const fn fragment_count(encoder: &Encoder<'_>) -> usize {
+            encoder.fragment_count()
+        }
+
         let ur = make_message_ur(256, "Wolf");
         let mut encoder = Encoder::bytes(&ur, 30).unwrap();
         let expected = vec![
@@ -454,7 +458,7 @@ mod tests {
             "ur:bytes/19-9/lpbwascfadaxcywenbpljkhdcadekicpaajootjzpsdrbalpeywllbdsnbinaerkurspbncxgslgftvtsrjtksplcpeo",
             "ur:bytes/20-9/lpbbascfadaxcywenbpljkhdcayapmrleeleaxpasfrtrdkncffwjyjzgyetdmlewtkpktgllepfrltataztksmhkbot",
         ];
-        assert_eq!(encoder.fragment_count(), 9);
+        assert_eq!(fragment_count(&encoder), 9);
         for (index, e) in expected.into_iter().enumerate() {
             assert_eq!(encoder.current_index(), index);
             assert_eq!(encoder.next_part().unwrap(), e);
