@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
  - Decode URs case-insensitively.
+ - Reject multipart URs that mix parts with different UR types, and expose the received type through `ur::Decoder::ur_type`.
 
 ## [0.5.1](https://github.com/dspicher/ur-rs/releases/tag/0.5.1) - 2026-07-27
  - Document and assert 1.85 as the MSRV.
