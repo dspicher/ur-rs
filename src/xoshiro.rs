@@ -39,9 +39,11 @@ impl Xoshiro256 {
         (self.next_double() * ((high - low + 1) as f64)) as u64 + low
     }
 
-    pub fn shuffled<T>(&mut self, mut items: Vec<T>) -> Vec<T> {
-        let mut shuffled = Vec::<T>::with_capacity(items.len());
-        while !items.is_empty() {
+    pub fn shuffled<T>(&mut self, mut items: Vec<T>, count: usize) -> Vec<T> {
+        assert!(count <= items.len());
+
+        let mut shuffled = Vec::<T>::with_capacity(count);
+        while shuffled.len() < count {
             let index = self.next_int(0, (items.len() - 1) as u64) as usize;
             let item = items.remove(index);
             shuffled.push(item);
@@ -185,8 +187,20 @@ mod tests {
             vec![10, 2, 1, 7, 9, 5, 6, 3, 4, 8],
         ];
         for e in expected {
-            let shuffled = rng.shuffled(values.clone());
+            let shuffled = rng.shuffled(values.clone(), values.len());
             assert_eq!(shuffled, e);
+        }
+    }
+
+    #[test]
+    fn test_partial_shuffle() {
+        let values = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        let mut full_rng = Xoshiro256::from("Wolf");
+        let full = full_rng.shuffled(values.clone(), values.len());
+
+        for count in 0..=values.len() {
+            let mut partial_rng = Xoshiro256::from("Wolf");
+            assert_eq!(partial_rng.shuffled(values.clone(), count), full[..count]);
         }
     }
 }
