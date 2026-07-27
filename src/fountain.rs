@@ -324,17 +324,16 @@ impl Decoder {
         if self.received.contains(&indexes) {
             return Ok(false);
         }
-        self.received.insert(indexes);
-        if part.is_simple() {
-            self.process_simple(part)?;
+        self.received.insert(indexes.clone());
+        if indexes.len() == 1 {
+            self.process_simple(part, indexes[0])?;
         } else {
-            self.process_complex(part)?;
+            self.process_complex(part, indexes)?;
         }
         Ok(true)
     }
 
-    fn process_simple(&mut self, part: Part) -> Result<(), Error> {
-        let index = *part.indexes().first().ok_or(Error::ExpectedItem)?;
+    fn process_simple(&mut self, part: Part, index: usize) -> Result<(), Error> {
         self.decoded.insert(index, part.clone());
         self.queue.push((index, part));
         self.process_queue()?;
@@ -371,12 +370,11 @@ impl Decoder {
         Ok(())
     }
 
-    fn process_complex(&mut self, mut part: Part) -> Result<(), Error> {
-        let mut indexes = part.indexes();
+    fn process_complex(&mut self, mut part: Part, mut indexes: Vec<usize>) -> Result<(), Error> {
         let to_remove: Vec<usize> = indexes
-            .clone()
-            .into_iter()
-            .filter(|idx| self.decoded.keys().any(|k| k == idx))
+            .iter()
+            .copied()
+            .filter(|idx| self.decoded.contains_key(idx))
             .collect();
         if indexes.len() == to_remove.len() {
             return Ok(());
@@ -696,9 +694,7 @@ fn choose_fragments(sequence: usize, fragment_count: usize, checksum: u32) -> Ve
     let mut xoshiro = crate::xoshiro::Xoshiro256::from(seed.as_slice());
     let degree = xoshiro.choose_degree(fragment_count);
     let indexes = (0..fragment_count).collect();
-    let mut shuffled = xoshiro.shuffled(indexes);
-    shuffled.truncate(degree as usize);
-    shuffled
+    xoshiro.shuffled(indexes, degree as usize)
 }
 
 fn xor(v1: &mut [u8], v2: &[u8]) {
