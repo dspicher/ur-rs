@@ -3,7 +3,10 @@ mod input;
 use base64::Engine;
 use gloo::console;
 use gloo::timers::callback::Interval;
-use qrcode_generator::QrCodeEcc;
+use qrcode_generator::{
+    qr::{Encoder as QrEncoder, ErrorCorrection},
+    Renderer,
+};
 use yew::prelude::*;
 
 pub enum Msg {
@@ -99,8 +102,11 @@ impl Component for App {
         let qrcode_rendered = self.current_part.as_ref().map_or_else(
             || html! {},
             |part| {
+                let symbol = QrEncoder::new(ErrorCorrection::Low)
+                    .encode_text(part)
+                    .unwrap();
                 let qr = base64::prelude::BASE64_STANDARD
-                    .encode(qrcode_generator::to_png_to_vec(part, QrCodeEcc::Low, 1024).unwrap());
+                    .encode(Renderer::new(&symbol, 1024).to_png_vec().unwrap());
                 html! {
                     <div id="wrapper">
                     <div id="qrcode">
