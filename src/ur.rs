@@ -43,6 +43,8 @@ pub enum Error {
     InvalidCharacters,
     /// Invalid indices in multi-part UR.
     InvalidIndices,
+    /// Received a multi-part UR whose type differs from previous parts.
+    UnexpectedType,
     /// Tried to decode a single-part UR as multi-part.
     NotMultiPart,
 }
@@ -56,6 +58,7 @@ impl core::fmt::Display for Error {
             Self::TypeUnspecified => write!(f, "no type specified"),
             Self::InvalidCharacters => write!(f, "type contains invalid characters"),
             Self::InvalidIndices => write!(f, "invalid indices"),
+            Self::UnexpectedType => write!(f, "received an unexpected UR type"),
             Self::NotMultiPart => write!(f, "can't decode single-part UR as multi-part"),
         }
     }
@@ -240,7 +243,7 @@ pub enum Kind {
 }
 
 type MultipartIndex = (usize, usize);
-type Decoded = (Kind, Vec<u8>, Option<MultipartIndex>);
+type Decoded = (Kind, String, Vec<u8>, Option<MultipartIndex>);
 
 /// Decodes a single URI (either single- or multi-part)
 /// into a tuple consisting of the [`Kind`] and the data
@@ -265,7 +268,7 @@ type Decoded = (Kind, Vec<u8>, Option<MultipartIndex>);
 /// an invalid scheme different from "ur" or an invalid number
 /// of "/" separators.
 pub fn decode(value: &str) -> Result<(Kind, Vec<u8>), Error> {
-    let (kind, payload, _) = decode_with_indices(value)?;
+    let (kind, _, payload, _) = decode_with_indices(value)?;
     Ok((kind, payload))
 }
 
@@ -279,6 +282,7 @@ fn decode_with_indices(value: &str) -> Result<Decoded, Error> {
     match strip_type.rsplit_once('/') {
         None => Ok((
             Kind::SinglePart,
+            String::from(r#type),
             crate::bytewords::decode(strip_type, crate::bytewords::Style::Minimal)?,
             None,
         )),
@@ -287,6 +291,7 @@ fn decode_with_indices(value: &str) -> Result<Decoded, Error> {
 
             Ok((
                 Kind::MultiPart,
+                String::from(r#type),
                 crate::bytewords::decode(payload, crate::bytewords::Style::Minimal)?,
                 Some(indices),
             ))
@@ -324,6 +329,7 @@ fn validate_type(s: &str) -> Result<(), Error> {
 #[derive(Default)]
 pub struct Decoder {
     fountain: crate::fountain::Decoder,
+    ur_type: Option<String>,
 }
 
 impl Decoder {
@@ -341,12 +347,20 @@ impl Decoder {
     ///  - The URI payload may not be a well-formed `bytewords` string
     ///  - The decoded byte payload may not be valid CBOR
     ///  - The CBOR-encoded fountain part may be inconsistent with previously received ones
+    ///  - The UR type may differ from previously received parts
     ///
     /// In all these cases, an error will be returned.
     pub fn receive(&mut self, value: &str) -> Result<(), Error> {
-        let (kind, decoded, indices) = decode_with_indices(value)?;
+        let (kind, ur_type, decoded, indices) = decode_with_indices(value)?;
         if kind != Kind::MultiPart {
             return Err(Error::NotMultiPart);
+        }
+        if self
+            .ur_type
+            .as_ref()
+            .is_some_and(|expected| expected != &ur_type)
+        {
+            return Err(Error::UnexpectedType);
         }
 
         let part = crate::fountain::Part::from_cbor(decoded.as_slice())?;
@@ -356,7 +370,18 @@ impl Decoder {
         }
 
         self.fountain.receive(part)?;
+        if self.ur_type.is_none() {
+            self.ur_type = Some(ur_type);
+        }
         Ok(())
+    }
+
+    /// Returns the type of the multi-part UR being decoded.
+    ///
+    /// Returns `None` before the first valid part has been received.
+    #[must_use]
+    pub fn ur_type(&self) -> Option<&str> {
+        self.ur_type.as_deref()
     }
 
     /// Returns whether the decoder is complete and hence the message available.
@@ -639,6 +664,10 @@ mod tests {
         );
         assert_eq!(super::Error::InvalidIndices.to_string(), "invalid indices");
         assert_eq!(
+            super::Error::UnexpectedType.to_string(),
+            "received an unexpected UR type"
+        );
+        assert_eq!(
             super::Error::NotMultiPart.to_string(),
             "can't decode single-part UR as multi-part"
         );
@@ -683,5 +712,31 @@ mod tests {
             decoder.receive(&tampered),
             Err(Error::InvalidIndices)
         ));
+    }
+
+    #[test]
+    fn test_decoder_rejects_mismatched_types() {
+        let message = b"Ten chars!";
+        let mut encoder = Encoder::new(message, 5, "first-type").unwrap();
+        let first = encoder.next_part().unwrap();
+        let second = encoder.next_part().unwrap();
+        let mismatched = second.replacen("ur:first-type/", "ur:second-type/", 1);
+
+        let mut decoder = Decoder::default();
+        assert_eq!(decoder.ur_type(), None);
+        decoder.receive(&first).unwrap();
+        assert_eq!(decoder.ur_type(), Some("first-type"));
+        assert!(matches!(
+            decoder.receive(&mismatched),
+            Err(Error::UnexpectedType)
+        ));
+
+        decoder.receive(&second.to_ascii_uppercase()).unwrap();
+        assert!(decoder.complete());
+        assert_eq!(decoder.ur_type(), Some("first-type"));
+        assert_eq!(
+            decoder.message().unwrap().as_deref(),
+            Some(message.as_slice())
+        );
     }
 }
