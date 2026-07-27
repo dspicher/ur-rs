@@ -3,7 +3,7 @@
 name = "ur"
 description = "A Rust implementation of Uniform Resources"
 license = "MIT"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Dominik Spicher <dominikspicher@gmail.com>"]
 edition = "2024"
 rust-version = "1.85"
