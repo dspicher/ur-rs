@@ -6,6 +6,7 @@ license = "MIT"
 version = "0.5.0"
 authors = ["Dominik Spicher <dominikspicher@gmail.com>"]
 edition = "2024"
+rust-version = "1.85"
 repository = "https://github.com/dspicher/ur-rs/"
 [workspace]
 members = ["examples/wasm", "fuzz"]

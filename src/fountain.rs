@@ -140,6 +140,7 @@ impl From<minicbor::encode::Error<Infallible>> for Error {
 #[derive(Debug)]
 pub struct Encoder {
     parts: Vec<Vec<u8>>,
+    fragment_count: usize,
     message_length: usize,
     checksum: u32,
     current_sequence: usize,
@@ -177,8 +178,10 @@ impl Encoder {
         }
         let fragment_length = fragment_length(message.len(), max_fragment_length);
         let fragments = partition(message.to_vec(), fragment_length);
+        let fragment_count = fragments.len();
         Ok(Self {
             parts: fragments,
+            fragment_count,
             message_length: message.len(),
             checksum: crate::crc32().checksum(message),
             current_sequence: 0,
@@ -211,7 +214,7 @@ impl Encoder {
     /// See the [`crate::fountain`] module documentation for an example.
     pub fn next_part(&mut self) -> Part {
         self.current_sequence += 1;
-        let indexes = choose_fragments(self.current_sequence, self.parts.len(), self.checksum);
+        let indexes = choose_fragments(self.current_sequence, self.fragment_count, self.checksum);
 
         let mut mixed = alloc::vec![0; self.parts[0].len()];
         for item in indexes {
@@ -220,7 +223,7 @@ impl Encoder {
 
         Part {
             sequence: self.current_sequence,
-            sequence_count: self.parts.len(),
+            sequence_count: self.fragment_count,
             message_length: self.message_length,
             checksum: self.checksum,
             data: mixed,
@@ -238,7 +241,7 @@ impl Encoder {
     /// ```
     #[must_use]
     pub const fn fragment_count(&self) -> usize {
-        self.parts.len()
+        self.fragment_count
     }
 
     /// Returns whether all original segments have been emitted at least once.
@@ -262,7 +265,7 @@ impl Encoder {
     /// [`current_sequence`]: Encoder::current_sequence
     #[must_use]
     pub const fn complete(&self) -> bool {
-        self.current_sequence >= self.parts.len()
+        self.current_sequence >= self.fragment_count
     }
 }
 
@@ -901,12 +904,17 @@ mod tests {
 
     #[test]
     fn test_fountain_encoder_is_complete() {
+        const fn progress(encoder: &Encoder) -> (usize, bool) {
+            (encoder.fragment_count(), encoder.complete())
+        }
+
         let message = crate::xoshiro::test_utils::make_message("Wolf", 256);
         let mut encoder = Encoder::new(&message, 30).unwrap();
-        for _ in 0..encoder.parts.len() {
+        assert_eq!(progress(&encoder), (9, false));
+        for _ in 0..encoder.fragment_count() {
             encoder.next_part();
         }
-        assert!(encoder.complete());
+        assert_eq!(progress(&encoder), (9, true));
     }
 
     #[test]
