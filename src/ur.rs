@@ -270,7 +270,8 @@ pub fn decode(value: &str) -> Result<(Kind, Vec<u8>), Error> {
 }
 
 fn decode_with_indices(value: &str) -> Result<Decoded, Error> {
-    let strip_scheme = value.strip_prefix("ur:").ok_or(Error::InvalidScheme)?;
+    let normalized = value.to_ascii_lowercase();
+    let strip_scheme = normalized.strip_prefix("ur:").ok_or(Error::InvalidScheme)?;
     let (r#type, strip_type) = strip_scheme.split_once('/').ok_or(Error::TypeUnspecified)?;
 
     validate_type(r#type)?;
@@ -584,6 +585,26 @@ mod tests {
         ));
         decode("ur:bytes/aeadaolazmjendeoti").unwrap();
         decode("ur:whatever-12/aeadaolazmjendeoti").unwrap();
+    }
+
+    #[test]
+    fn test_case_agnostic_decode() {
+        assert_eq!(
+            decode(&encode(b"data", &Type::Bytes).to_ascii_uppercase()).unwrap(),
+            (Kind::SinglePart, b"data".to_vec())
+        );
+        let message = b"Ten chars!";
+        let mut encoder = Encoder::bytes(message, 5).unwrap();
+        let mut decoder = Decoder::default();
+        for _ in 0..encoder.fragment_count() {
+            decoder
+                .receive(&encoder.next_part().unwrap().to_ascii_uppercase())
+                .unwrap();
+        }
+        assert_eq!(
+            decoder.message().unwrap().as_deref(),
+            Some(message.as_slice())
+        );
     }
 
     #[test]
