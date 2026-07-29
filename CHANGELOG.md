@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+
+## [0.5.2](https://github.com/dspicher/ur-rs/releases/tag/0.5.2) - 2026-07-29
  - Decode URs case-insensitively.
  - Reject multipart URs that mix parts with different UR types, and expose the received type through `ur::Decoder::ur_type`.
 
